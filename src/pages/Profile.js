@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { User, Eye, Heart, Calendar, Mail, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { getFavorites, getRecentlyViewed } from '../services/favoritesService';
+import { getFavorites, getRecentlyViewed, cleanDuplicateRecentlyViewed } from '../services/favoritesService';
 import VehicleCard from '../components/vehicles/VehicleCard';
 import toast from 'react-hot-toast';
 
@@ -20,6 +20,13 @@ const Profile = () => {
   useEffect(() => {
     const loadUserData = async () => {
       try {
+        // Primero limpiar duplicados existentes (no crítico si falla)
+        try {
+          await cleanDuplicateRecentlyViewed();
+        } catch (cleanError) {
+          console.warn('Error limpiando duplicados (no crítico):', cleanError);
+        }
+        
         // Cargar favoritos y vistos recientemente desde la base de datos
         const [favoritesData, recentlyViewedData] = await Promise.all([
           getFavorites(),
@@ -210,7 +217,7 @@ const Profile = () => {
                   <div className="flex transition-transform duration-300 ease-in-out" 
                        style={{ transform: `translateX(-${currentCarouselIndex * 100}%)` }}>
                     {recentlyViewed.map((vehicle, index) => (
-                      <div key={`recent-${vehicle.id}`} className="w-full flex-shrink-0 px-2">
+                      <div key={`recent-${vehicle.id}-${index}`} className="w-full flex-shrink-0 px-2">
                         <VehicleCard vehicle={vehicle} compact />
                       </div>
                     ))}
@@ -272,8 +279,8 @@ const Profile = () => {
             </div>
             {favorites.length > 0 ? (
               <div className="space-y-3">
-                {favorites.slice(0, 3).map((vehicle) => (
-                  <div key={`favorite-${vehicle.id}`} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                {favorites.slice(0, 3).map((vehicle, index) => (
+                  <div key={`favorite-${vehicle.id}-${index}`} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <img

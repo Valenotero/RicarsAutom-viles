@@ -39,13 +39,13 @@ const VehicleDetail = () => {
         // Agregar a vistos recientemente
         await addToRecentlyViewed(id);
         
-        // Incrementar contador de vistas
-        try {
-          const { supabase } = await import('../supabase/config');
-          await supabase.rpc('increment_vehicle_views', { vehicle_uuid: id });
-        } catch (error) {
-          console.error('Error incrementando vistas:', error);
-        }
+        // TODO: Implementar incremento de vistas cuando se cree la función en Supabase
+        // try {
+        //   const { supabase } = await import('../supabase/config');
+        //   await supabase.rpc('increment_vehicle_views', { vehicle_uuid: id });
+        // } catch (error) {
+        //   console.error('Error incrementando vistas:', error);
+        // }
         
         // Cargar vehículos similares
         const similar = await getSimilarVehicles(vehicleData);

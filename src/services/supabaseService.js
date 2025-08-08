@@ -177,8 +177,8 @@ export const vehicleService = {
 
   // Obtener vehículo por ID
   async getVehicleById(id) {
-    // Incrementar contador de vistas
-    await supabase.rpc('increment_vehicle_views', { vehicle_id: id });
+    // TODO: Implementar incremento de vistas cuando se cree la función en Supabase
+    // await supabase.rpc('increment_vehicle_views', { vehicle_id: id });
 
     const { data, error } = await supabase
       .from('vehicles')

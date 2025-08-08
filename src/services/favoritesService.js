@@ -157,11 +157,15 @@ export const addToRecentlyViewed = async (vehicleId) => {
       return { success: true };
     }
 
+    // Usar upsert para evitar duplicados y problemas de concurrencia
     const { error } = await supabase
       .from('recently_viewed')
-      .insert({
+      .upsert({
         user_id: user.id,
-        vehicle_id: vehicleId
+        vehicle_id: vehicleId,
+        viewed_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,vehicle_id'
       });
 
     if (error) throw error;
@@ -209,14 +213,26 @@ export const getRecentlyViewed = async () => {
       `)
       .eq('user_id', user.id)
       .order('viewed_at', { ascending: false })
-      .limit(10);
+      .limit(50); // Aumentar el límite para asegurar que obtenemos todos los registros
 
     if (error) throw error;
 
-    return data.map(item => ({
-      ...item.vehicles,
-      viewed_at: item.viewed_at
-    }));
+    // Eliminar duplicados basándose en vehicle_id, manteniendo el más reciente
+    const uniqueVehicles = new Map();
+    
+    data.forEach(item => {
+      const vehicleId = item.vehicle_id;
+      if (!uniqueVehicles.has(vehicleId) || 
+          new Date(item.viewed_at) > new Date(uniqueVehicles.get(vehicleId).viewed_at)) {
+        uniqueVehicles.set(vehicleId, {
+          ...item.vehicles,
+          viewed_at: item.viewed_at
+        });
+      }
+    });
+
+    // Convertir el Map a array y limitar a 10 elementos
+    return Array.from(uniqueVehicles.values()).slice(0, 10);
   } catch (error) {
     console.error('Error obteniendo vistos recientemente:', error);
     return [];
@@ -256,5 +272,63 @@ export const clearRecentlyViewed = async () => {
   } catch (error) {
     console.error('Error limpiando vistos recientemente:', error);
     throw error;
+  }
+};
+
+// Función para limpiar duplicados existentes en la base de datos
+export const cleanDuplicateRecentlyViewed = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: true };
+    }
+
+    // Obtener todos los registros del usuario
+    const { data, error } = await supabase
+      .from('recently_viewed')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('viewed_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Agrupar por vehicle_id y mantener solo el más reciente
+    const uniqueRecords = new Map();
+    data.forEach(record => {
+      const vehicleId = record.vehicle_id;
+      if (!uniqueRecords.has(vehicleId) || 
+          new Date(record.viewed_at) > new Date(uniqueRecords.get(vehicleId).viewed_at)) {
+        uniqueRecords.set(vehicleId, record);
+      }
+    });
+
+    // Solo proceder si hay duplicados
+    if (uniqueRecords.size < data.length) {
+      // Eliminar todos los registros del usuario
+      const { error: deleteError } = await supabase
+        .from('recently_viewed')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (deleteError) throw deleteError;
+
+      // Reinsertar solo los registros únicos (máximo 10)
+      const uniqueRecordsArray = Array.from(uniqueRecords.values()).slice(0, 10);
+      if (uniqueRecordsArray.length > 0) {
+        const { error: insertError } = await supabase
+          .from('recently_viewed')
+          .insert(uniqueRecordsArray);
+
+        if (insertError) throw insertError;
+      }
+
+      return { success: true, cleanedCount: data.length - uniqueRecordsArray.length };
+    }
+
+    return { success: true, cleanedCount: 0 };
+  } catch (error) {
+    console.error('Error limpiando duplicados:', error);
+    // No lanzar el error, solo logearlo para evitar que rompa la aplicación
+    return { success: false, error: error.message };
   }
 };
