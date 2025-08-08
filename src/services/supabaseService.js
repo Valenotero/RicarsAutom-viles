@@ -42,36 +42,55 @@ export const authService = {
     return session;
   },
 
-  // Obtener perfil de usuario
+  // Obtener perfil de usuario - simplificado
   async getUserProfile(userId) {
     console.log('🔍 Buscando perfil para userId:', userId);
     
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.error('❌ Error obteniendo perfil:', error);
-      
-      // Si no encuentra el perfil, buscar por email
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email === 'oterov101@gmail.com') {
-        console.log('🔑 Creando/retornando perfil admin para oterov101@gmail.com');
+      if (error) {
+        console.warn('⚠️ Error obteniendo perfil de DB:', error);
+        
+        // Fallback: obtener usuario actual
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email === 'oterov101@gmail.com') {
+          console.log('🔑 Retornando perfil owner para oterov101@gmail.com');
+          return {
+            id: userId,
+            email: 'oterov101@gmail.com',
+            display_name: 'Administrador Principal',
+            role: 'owner'
+          };
+        }
+        
+        // Para otros usuarios, retornar perfil básico
         return {
           id: userId,
-          email: 'oterov101@gmail.com',
-          display_name: 'Administrador Principal',
-          role: 'admin'
+          email: user?.email || 'usuario@example.com',
+          display_name: user?.user_metadata?.display_name || 'Usuario',
+          role: 'cliente'
         };
       }
-      
-      throw error;
-    }
 
-    console.log('✅ Perfil encontrado:', data);
-    return data;
+      console.log('✅ Perfil encontrado:', data);
+      return data;
+    } catch (error) {
+      console.warn('⚠️ Error en getUserProfile, usando fallback:', error);
+      
+      // Fallback básico
+      const { data: { user } } = await supabase.auth.getUser();
+      return {
+        id: userId,
+        email: user?.email || 'usuario@example.com',
+        display_name: user?.user_metadata?.display_name || 'Usuario',
+        role: user?.email === 'oterov101@gmail.com' ? 'owner' : 'cliente'
+      };
+    }
   },
 
   // Escuchar cambios de autenticación
@@ -406,5 +425,85 @@ export const statisticsService = {
       featuredVehicles: featuredVehicles || 0,
       promotionVehicles: promotionVehicles || 0
     };
+  },
+
+  // Obtener estadísticas de distribución por condición
+  async getVehicleConditionStats() {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_vehicle_condition_stats');
+
+      if (error) throw error;
+      return data[0] || { new_vehicles: 0, used_vehicles: 0, total_vehicles: 0 };
+    } catch (error) {
+      console.error('Error obteniendo estadísticas de condición:', error);
+      return { new_vehicles: 0, used_vehicles: 0, total_vehicles: 0 };
+    }
+  },
+
+  // Obtener estadísticas de vistas de blog
+  async getBlogViewsStats() {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_blog_views_stats');
+
+      if (error) throw error;
+      return data[0] || { total_views: 0, total_articles: 0, avg_views_per_article: 0 };
+    } catch (error) {
+      console.error('Error obteniendo estadísticas de blog:', error);
+      return { total_views: 0, total_articles: 0, avg_views_per_article: 0 };
+    }
+  },
+
+  // Obtener estadísticas generales mejoradas
+  async getEnhancedVehicleStats() {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_enhanced_vehicle_stats');
+
+      if (error) throw error;
+      return data[0] || { 
+        total_vehicles: 0, 
+        total_views: 0, 
+        featured_vehicles: 0, 
+        promotion_vehicles: 0,
+        new_vehicles: 0,
+        used_vehicles: 0
+      };
+    } catch (error) {
+      console.error('Error obteniendo estadísticas mejoradas:', error);
+      return { 
+        total_vehicles: 0, 
+        total_views: 0, 
+        featured_vehicles: 0, 
+        promotion_vehicles: 0,
+        new_vehicles: 0,
+        used_vehicles: 0
+      };
+    }
+  },
+
+  // Obtener estadísticas de vistas de galería
+  async getGalleryViewsStats() {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_gallery_views_stats');
+
+      if (error) throw error;
+      return data[0] || { 
+        total_views: 0, 
+        total_items: 0, 
+        avg_views_per_item: 0, 
+        total_unique_visitors: 0 
+      };
+    } catch (error) {
+      console.error('Error obteniendo estadísticas de galería:', error);
+      return { 
+        total_views: 0, 
+        total_items: 0, 
+        avg_views_per_item: 0, 
+        total_unique_visitors: 0 
+      };
+    }
   }
 };

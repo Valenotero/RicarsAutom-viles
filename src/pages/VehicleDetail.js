@@ -16,6 +16,7 @@ import {
 import { motion } from 'framer-motion';
 import VehicleCard from '../components/vehicles/VehicleCard';
 import { getVehicleById, getSimilarVehicles } from '../services/vehicleService';
+import { addToRecentlyViewed, addToFavorites, removeFromFavorites, isFavorite } from '../services/favoritesService';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -26,7 +27,7 @@ const VehicleDetail = () => {
   const [similarVehicles, setSimilarVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
     const loadVehicle = async () => {
@@ -35,9 +36,26 @@ const VehicleDetail = () => {
         const vehicleData = await getVehicleById(id);
         setVehicle(vehicleData);
         
+        // Agregar a vistos recientemente
+        await addToRecentlyViewed(id);
+        
+        // Incrementar contador de vistas
+        try {
+          const { supabase } = await import('../supabase/config');
+          await supabase.rpc('increment_vehicle_views', { vehicle_uuid: id });
+        } catch (error) {
+          console.error('Error incrementando vistas:', error);
+        }
+        
         // Cargar vehículos similares
         const similar = await getSimilarVehicles(vehicleData);
         setSimilarVehicles(similar);
+        
+        // Verificar si está en favoritos
+        if (currentUser) {
+          const favorited = await isFavorite(id);
+          setIsFavorited(favorited);
+        }
       } catch (error) {
         console.error('Error cargando vehículo:', error);
         toast.error('Error al cargar el vehículo');
@@ -47,7 +65,7 @@ const VehicleDetail = () => {
     };
 
     loadVehicle();
-  }, [id]);
+  }, [id, currentUser]);
 
   const formatPrice = (price, currency = 'USD') => {
     return new Intl.NumberFormat('es-AR', {
@@ -85,13 +103,26 @@ const VehicleDetail = () => {
     window.open(mercadolibreUrl, '_blank');
   };
 
-  const handleFavorite = () => {
+  const handleFavorite = async () => {
     if (!currentUser) {
       toast.error('Debes iniciar sesión para guardar favoritos');
       return;
     }
-    setIsFavorite(!isFavorite);
-    toast.success(isFavorite ? 'Removido de favoritos' : 'Agregado a favoritos');
+    
+    try {
+      if (isFavorited) {
+        await removeFromFavorites(id);
+        setIsFavorited(false);
+        toast.success('Removido de favoritos');
+      } else {
+        await addToFavorites(id);
+        setIsFavorited(true);
+        toast.success('Agregado a favoritos');
+      }
+    } catch (error) {
+      console.error('Error manejando favorito:', error);
+      toast.error('Error al actualizar favoritos');
+    }
   };
 
   const nextImage = () => {
@@ -286,12 +317,12 @@ const VehicleDetail = () => {
               <button
                 onClick={handleFavorite}
                 className={`p-3 rounded-lg border transition-colors duration-200 ${
-                  isFavorite 
+                  isFavorited 
                     ? 'border-red-500 text-red-600 bg-red-50' 
                     : 'border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-600'
                 }`}
               >
-                <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+                <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
               </button>
               
               <button className="p-3 rounded-lg border border-gray-300 text-gray-600 hover:border-gray-400 transition-colors duration-200">

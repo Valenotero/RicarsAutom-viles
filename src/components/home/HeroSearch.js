@@ -49,7 +49,7 @@ const HeroSearch = () => {
               name="brand"
               value={searchData.brand}
               onChange={handleChange}
-              className="select-field pl-10"
+              className="search-select pl-10"
             >
               <option value="">Todas las marcas</option>
               <option value="toyota">Toyota</option>
@@ -90,7 +90,11 @@ const HeroSearch = () => {
               <option value="5000-10000">$5,000 - $10,000 USD</option>
               <option value="10000-20000">$10,000 - $20,000 USD</option>
               <option value="20000-50000">$20,000 - $50,000 USD</option>
-              <option value="50000+">Más de $50,000 USD</option>
+              <option value="50000-100000">$50,000 - $100,000 USD</option>
+              <option value="100000-500000">$100,000 - $500,000 USD</option>
+              <option value="500000-1000000">$500,000 - $1,000,000 USD</option>
+              <option value="1000000-150000000">$1,000,000 - $150,000,000 USD</option>
+              <option value="150000000+">Más de $150,000,000 USD</option>
             </select>
           </div>
 

@@ -1,16 +1,9 @@
 import React from 'react';
 
-const LoadingSpinner = ({ size = 'md', className = '' }) => {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12',
-    xl: 'w-16 h-16'
-  };
-
+const LoadingSpinner = () => {
   return (
-    <div className={`flex justify-center items-center min-h-screen ${className}`}>
-      <div className={`loading-spinner ${sizeClasses[size]}`}></div>
+    <div className="flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
     </div>
   );
 };

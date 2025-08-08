@@ -479,6 +479,8 @@ const VehicleForm = ({ vehicle, onClose, onSuccess }) => {
                       value={formData.kilometers}
                       onChange={handleChange}
                       required
+                      min="0"
+                      max="999999"
                       className="input-field"
                       placeholder="0"
                     />
@@ -513,7 +515,7 @@ const VehicleForm = ({ vehicle, onClose, onSuccess }) => {
                         onChange={handleChange}
                         required
                         className="input-field pl-8"
-                        placeholder={formData.currency === 'USD' ? '25000' : '25000000'}
+                        placeholder={formData.currency === 'USD' ? '150000000' : '150000000000'}
                       />
                     </div>
                   </div>

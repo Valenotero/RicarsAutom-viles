@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, Crown, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { currentUser, logout, isAdmin } = useAuth();
+  const [isOwnerVerified, setIsOwnerVerified] = useState(false);
+  const { currentUser, logout, isAdmin, isOwner } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const userMenuRef = useRef(null);
@@ -15,14 +16,37 @@ const Navbar = () => {
   const navigation = [
     { name: 'Inicio', href: '/' },
     { name: 'Catálogo', href: '/catalogo' },
+    { name: 'Galería', href: '/galeria' },
+    { name: 'Blog', href: '/blog' },
     { name: 'Nosotros', href: '/nosotros' },
   ];
 
   const handleLogout = async () => {
-    setIsOpen(false);
-    setUserMenuOpen(false);
-    await logout();
-    navigate('/');
+    try {
+      console.log('🚪 Navbar: Iniciando logout...');
+      setIsOpen(false);
+      setUserMenuOpen(false);
+      
+      // Mostrar feedback visual
+      const logoutButton = document.querySelector('[data-logout-button]');
+      if (logoutButton) {
+        logoutButton.disabled = true;
+        logoutButton.innerHTML = '<div class="animate-spin w-4 h-4 mr-2">⏳</div>Cerrando...';
+      }
+      
+      await logout();
+      console.log('✅ Navbar: Logout exitoso');
+      navigate('/');
+      
+    } catch (error) {
+      console.error('❌ Navbar: Error en logout:', error);
+      // Restaurar botón si hay error
+      const logoutButton = document.querySelector('[data-logout-button]');
+      if (logoutButton) {
+        logoutButton.disabled = false;
+        logoutButton.innerHTML = '<LogOut className="w-4 h-4 mr-2" />Cerrar Sesión';
+      }
+    }
   };
 
   // Cerrar menú cuando se hace clic fuera
@@ -38,6 +62,26 @@ const Navbar = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Verificar permisos de owner - simplificado
+  useEffect(() => {
+    const checkOwnerPermissions = () => {
+      if (!currentUser) {
+        setIsOwnerVerified(false);
+        return;
+      }
+
+      // Verificar si es owner basado en email
+      const isOwnerUser = currentUser.email === 'oterov101@gmail.com';
+      setIsOwnerVerified(isOwnerUser);
+      console.log('🔍 Navbar: Verificación owner:', {
+        email: currentUser.email,
+        isOwner: isOwnerUser
+      });
+    };
+
+    checkOwnerPermissions();
+  }, [currentUser]);
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
@@ -100,6 +144,16 @@ const Navbar = () => {
                         <User className="w-4 h-4 mr-2" />
                         Mi Perfil
                       </Link>
+                      {isOwnerVerified && (
+                        <Link
+                          to="/users"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-300"
+                        >
+                          <Crown className="w-4 h-4 mr-2" />
+                          Gestión de Usuarios
+                        </Link>
+                      )}
                       {isAdmin() && (
                         <Link
                           to="/admin"
@@ -112,6 +166,7 @@ const Navbar = () => {
                       )}
                       <button
                         onClick={handleLogout}
+                        data-logout-button
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-300"
                       >
                         <LogOut className="w-4 h-4 mr-2" />
@@ -189,6 +244,16 @@ const Navbar = () => {
                     <User className="w-4 h-4 mr-2" />
                     Mi Perfil
                   </Link>
+                  {isOwnerVerified && (
+                    <Link
+                      to="/users"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Gestión de Usuarios
+                    </Link>
+                  )}
                   {isAdmin() && (
                     <Link
                       to="/admin"

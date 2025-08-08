@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/supabaseService';
+import { supabase } from '../supabase/config';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
@@ -78,19 +79,43 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Verificar si es owner (dueño) - simplificado
+  async function isOwner() {
+    if (!currentUser) {
+      console.log('🔍 isOwner: No hay usuario autenticado');
+      return false;
+    }
+
+    // Forzar owner para tu email específico
+    if (currentUser.email === 'oterov101@gmail.com') {
+      console.log('👑 OWNER FORZADO en isOwner() para oterov101@gmail.com');
+      return true;
+    }
+
+    // Para otros usuarios, verificar desde userRole
+    const isOwnerResult = userRole === 'owner';
+    console.log('🔍 Verificación owner desde userRole:', {
+      email: currentUser.email,
+      userRole,
+      isOwner: isOwnerResult
+    });
+
+    return isOwnerResult;
+  }
+
   // Verificar si es admin
   function isAdmin() {
     console.log('🔍 Verificando rol admin:', { 
       userRole, 
       currentUser: currentUser?.email,
-      result: userRole === 'admin' 
+      result: userRole === 'admin' || userRole === 'owner'
     });
-    return userRole === 'admin';
+    return userRole === 'admin' || userRole === 'owner';
   }
 
   // Verificar si es cliente
   function isClient() {
-    return userRole === 'cliente' || userRole === 'admin';
+    return userRole === 'cliente' || userRole === 'admin' || userRole === 'owner';
   }
 
   // Obtener mensaje de error en español
@@ -119,16 +144,27 @@ export function AuthProvider({ children }) {
           setCurrentUser(session.user);
           console.log('👤 Usuario autenticado:', session.user.email);
           
-          // Forzar admin directamente para tu email
+          // Forzar owner (dueño) directamente para tu email
           if (session.user.email === 'oterov101@gmail.com') {
-            setUserRole('admin');
-            console.log('🔑 ADMIN FORZADO para oterov101@gmail.com');
+            setUserRole('owner');
+            console.log('👑 OWNER FORZADO para oterov101@gmail.com');
             return;
           }
           
-          // Para todos los usuarios autenticados, establecer como cliente por defecto
-          console.log('👤 Estableciendo rol cliente para usuario autenticado');
-          setUserRole('cliente');
+          // Obtener rol desde la base de datos para otros usuarios
+          try {
+            const { data: profile, error } = await authService.getUserProfile(session.user.id);
+            if (error) {
+              console.warn('⚠️ No se pudo obtener perfil, usando rol cliente por defecto');
+              setUserRole('cliente');
+            } else {
+              console.log('✅ Rol obtenido desde DB:', profile.role);
+              setUserRole(profile.role || 'cliente');
+            }
+          } catch (profileError) {
+            console.warn('⚠️ Error obteniendo perfil, usando rol cliente por defecto:', profileError);
+            setUserRole('cliente');
+          }
         }
       } catch (error) {
         console.error('❌ Error obteniendo sesión:', error);
@@ -151,16 +187,22 @@ export function AuthProvider({ children }) {
       if (event === 'SIGNED_IN' && session?.user) {
         setCurrentUser(session.user);
         
-        // Forzar admin directamente para tu email
+        // Forzar owner (dueño) directamente para tu email
         if (session.user.email === 'oterov101@gmail.com') {
-          setUserRole('admin');
-          console.log('🔑 ADMIN FORZADO en onChange para oterov101@gmail.com');
+          setUserRole('owner');
+          console.log('👑 OWNER FORZADO en onChange para oterov101@gmail.com');
           return;
         }
         
-        // Para todos los usuarios autenticados, establecer como cliente por defecto
-        console.log('👤 Estableciendo rol cliente para usuario en onChange');
-        setUserRole('cliente');
+        // Obtener rol desde la base de datos para otros usuarios
+        try {
+          const profile = await authService.getUserProfile(session.user.id);
+          console.log('✅ Rol obtenido desde DB en onChange:', profile.role);
+          setUserRole(profile.role || 'cliente');
+        } catch (profileError) {
+          console.warn('⚠️ Error obteniendo perfil en onChange, usando rol cliente por defecto:', profileError);
+          setUserRole('cliente');
+        }
       } else if (event === 'SIGNED_OUT') {
         console.log('🔓 SIGNED_OUT detectado, limpiando estado...');
         setCurrentUser(null);
@@ -182,6 +224,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     resetPassword,
+    isOwner,
     isAdmin,
     isClient,
     loading
@@ -189,7 +232,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

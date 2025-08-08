@@ -2,169 +2,123 @@
 
 ## 📋 Descripción
 
-Ricars Automóviles es una plataforma web completa para concesionarias de vehículos, desarrollada con React + Firebase. La aplicación permite a los usuarios explorar un catálogo de vehículos, ver detalles completos, contactar con la concesionaria y gestionar el inventario desde un panel de administración.
+Ricars Automóviles es una plataforma web completa y moderna para concesionarias de vehículos desarrollada con React y Supabase. La aplicación ofrece un sistema integral de gestión de inventario, catálogo interactivo, galería multimedia, blog corporativo y panel de administración avanzado.
 
 ## 🚀 Características Principales
 
-### Para Usuarios
-- **Página de Inicio**: Hero con búsqueda rápida, categorías de vehículos, destacados y recientes
-- **Catálogo Avanzado**: Filtros por marca, modelo, precio, año, tipo, etc.
-- **Detalle de Vehículo**: Galería de imágenes, ficha técnica completa, conversión de precios
-- **Sistema de Autenticación**: Registro, login y recuperación de contraseña
-- **Contacto Integrado**: WhatsApp, Facebook, MercadoLibre
-- **Página "Sobre Nosotros"**: Historia, equipo y información de contacto
+### 🏠 Página de Inicio
+- **Hero Section**: Búsqueda rápida con filtros avanzados
+- **Categorías de Vehículos**: Navegación por tipo (Sedán, SUV, Pick-Up, etc.)
+- **Vehículos Destacados**: Sección de recomendados con estadísticas
+- **Vehículos Recientes**: Últimos vehículos agregados al inventario
+- **Estadísticas en Tiempo Real**: Contadores de vehículos y visitas
 
-### Para Administradores
-- **Panel de Administración**: Dashboard con estadísticas y gestión completa
-- **Gestión de Vehículos**: Agregar, editar, eliminar vehículos
-- **Carga de Imágenes**: Subida múltiple de imágenes a Firebase Storage
-- **Estadísticas**: Visitas por vehículo, totales, destacados, promociones
-- **Sistema de Roles**: Control de acceso basado en roles (admin, cliente, usuario)
+### 🚗 Catálogo Avanzado
+- **Filtros Dinámicos**: Por marca, modelo, precio, año, tipo, combustible
+- **Búsqueda Inteligente**: Filtrado en tiempo real
+- **Ordenamiento**: Por precio, fecha, kilometraje, popularidad
+- **Vista de Tarjetas**: Diseño responsive con información completa
+- **Paginación**: Navegación eficiente por grandes inventarios
 
-## 🛠 Tecnologías Utilizadas
+### 📱 Detalle de Vehículo
+- **Galería de Imágenes**: React Image Gallery con navegación táctil
+- **Ficha Técnica Completa**: Especificaciones detalladas
+- **Conversión de Precios**: USD y ARS con actualización automática
+- **Características Dinámicas**: Lista personalizable de features
+- **Vehículos Similares**: Recomendaciones automáticas
+- **Contador de Visitas**: Tracking de popularidad
+- **Botones de Contacto**: WhatsApp, Facebook, MercadoLibre integrados
 
-- **Frontend**: React 18, React Router DOM
-- **Estilos**: Tailwind CSS, Framer Motion
-- **Backend**: Firebase (Auth, Firestore, Storage)
-- **Iconos**: Lucide React
-- **Formularios**: React Hook Form
-- **Notificaciones**: React Hot Toast
-- **Galería**: React Image Gallery
+### 🔐 Sistema de Autenticación
+- **Registro de Usuarios**: Formulario completo con validaciones
+- **Inicio de Sesión**: Autenticación segura con Supabase
+- **Recuperación de Contraseña**: Flujo completo de reset
+- **Perfil de Usuario**: Gestión de datos personales
+- **Sistema de Roles**: Admin, Cliente, Owner con permisos específicos
 
-## 📦 Instalación
+### 🎨 Galería Multimedia
+- **Categorías**: Eventos, Instalaciones, Equipo, Vehículos, Promociones
+- **Filtros Dinámicos**: Navegación por categoría
+- **Modal de Visualización**: Vista ampliada con controles
+- **Contador de Visitas**: Tracking de popularidad por item
+- **Responsive Design**: Optimizado para móviles y tablets
 
-### Prerrequisitos
-- Node.js (versión 16 o superior)
-- npm o yarn
-- Cuenta de Firebase
+### 📝 Blog Corporativo
+- **Artículos Informativos**: Gestión completa de contenido
+- **Editor Rich Text**: Formato avanzado para contenido
+- **Categorización**: Organización por temas
+- **Contador de Visitas**: Métricas de engagement
+- **SEO Optimizado**: Meta tags y estructura semántica
 
-### Pasos de Instalación
+### ⚙️ Panel de Administración
+- **Dashboard Completo**: Estadísticas en tiempo real
+- **Gestión de Vehículos**: CRUD completo con validaciones
+- **Carga de Imágenes**: Subida múltiple con optimización
+- **Gestión de Galería**: Subir y organizar contenido multimedia
+- **Gestión de Blog**: Crear y editar artículos
+- **Estadísticas Avanzadas**: Métricas detalladas de rendimiento
+- **Gestión de Usuarios**: Control de roles y permisos
 
-1. **Clonar el repositorio**
-```bash
-git clone <url-del-repositorio>
-cd ricars-automotores
-```
+### 💾 Sistema de Favoritos
+- **Guardado de Vehículos**: Lista personal de favoritos
+- **Sincronización**: Datos persistentes en Supabase
+- **Interfaz Intuitiva**: Botones de favorito en tarjetas
+- **Gestión de Lista**: Ver y eliminar favoritos
 
-2. **Instalar dependencias**
-```bash
-npm install
-```
+## 🛠 Tecnologías y Dependencias
 
-3. **Configurar Firebase**
-   - Crear un proyecto en [Firebase Console](https://console.firebase.google.com/)
-   - Habilitar Authentication, Firestore Database y Storage
-   - Copiar las credenciales de configuración
-   - Actualizar `src/firebase/config.js` con tus credenciales
+### Frontend
+- **React 18.2.0**: Framework principal
+- **React Router DOM 6.3.0**: Navegación SPA
+- **React Hook Form 7.43.9**: Gestión de formularios
+- **React Hot Toast 2.4.1**: Notificaciones
+- **React Image Gallery 1.2.11**: Galería de imágenes
+- **React Intersection Observer 9.4.3**: Lazy loading
 
-4. **Configurar reglas de Firestore**
-```javascript
-// En Firebase Console > Firestore Database > Rules
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Usuarios pueden leer su propio documento
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Cualquiera puede leer vehículos
-    match /vehicles/{vehicleId} {
-      allow read: if true;
-      allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-  }
-}
-```
+### Estilos y Animaciones
+- **Tailwind CSS 3.3.2**: Framework de estilos
+- **Framer Motion 10.12.16**: Animaciones fluidas
+- **Lucide React 0.263.1**: Iconografía moderna
 
-5. **Configurar reglas de Storage**
-```javascript
-// En Firebase Console > Storage > Rules
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /vehicles/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-  }
-}
-```
+### Backend y Base de Datos
+- **Supabase 2.54.0**: Backend as a Service
+  - Autenticación y autorización
+  - Base de datos PostgreSQL
+  - Storage para imágenes
+  - Real-time subscriptions
 
-6. **Ejecutar en desarrollo**
-```bash
-npm start
-```
+### Herramientas de Desarrollo
+- **PostCSS 8.4.24**: Procesamiento de CSS
+- **Autoprefixer 10.4.14**: Compatibilidad de navegadores
 
-La aplicación estará disponible en `http://localhost:3000`
+## 🏗️ Arquitectura del Proyecto
 
-## 🏗 Estructura del Proyecto
-
+### Estructura de Componentes
 ```
 src/
-├── components/          # Componentes reutilizables
-│   ├── admin/          # Componentes del panel de administración
+├── components/
+│   ├── admin/          # Componentes del panel administrativo
 │   ├── auth/           # Componentes de autenticación
 │   ├── catalog/        # Componentes del catálogo
-│   ├── home/           # Componentes de la página de inicio
-│   ├── layout/         # Componentes de layout (Navbar, Footer)
-│   ├── ui/             # Componentes de interfaz básicos
-│   └── vehicles/       # Componentes relacionados con vehículos
-├── contexts/           # Contextos de React (AuthContext)
-├── firebase/           # Configuración de Firebase
+│   ├── home/           # Componentes de la página principal
+│   ├── layout/         # Componentes de estructura
+│   ├── ui/             # Componentes reutilizables
+│   └── vehicles/       # Componentes de vehículos
+├── contexts/           # Contextos de React
 ├── pages/              # Páginas principales
-│   ├── admin/          # Páginas del panel de administración
-│   └── auth/           # Páginas de autenticación
-├── services/           # Servicios para comunicación con Firebase
-└── App.js              # Componente principal
+├── services/           # Servicios de API
+└── supabase/           # Configuración de Supabase
 ```
 
-## 🚀 Deployment
+### Servicios Principales
+- **vehicleService.js**: Gestión de vehículos
+- **favoritesService.js**: Sistema de favoritos
+- **blogViewsService.js**: Tracking de visitas al blog
+- **galleryViewsService.js**: Tracking de visitas a la galería
+- **supabaseService.js**: Operaciones de base de datos
+- **localApiService.js**: Servicios locales y utilidades
 
-### Vercel (Recomendado)
-
-1. **Instalar Vercel CLI**
-```bash
-npm install -g vercel
-```
-
-2. **Configurar variables de entorno**
-```bash
-vercel env add REACT_APP_FIREBASE_API_KEY
-vercel env add REACT_APP_FIREBASE_AUTH_DOMAIN
-vercel env add REACT_APP_FIREBASE_PROJECT_ID
-vercel env add REACT_APP_FIREBASE_STORAGE_BUCKET
-vercel env add REACT_APP_FIREBASE_MESSAGING_SENDER_ID
-vercel env add REACT_APP_FIREBASE_APP_ID
-```
-
-3. **Deploy**
-```bash
-vercel --prod
-```
-
-### Hostinger
-
-1. **Build del proyecto**
-```bash
-npm run build
-```
-
-2. **Subir archivos**
-   - Subir el contenido de la carpeta `build/` al directorio raíz de tu hosting
-   - Configurar redirección para SPA en `.htaccess`:
-```apache
-RewriteEngine On
-RewriteBase /
-RewriteRule ^index\.html$ - [L]
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
-```
-
-## 👥 Roles y Permisos
+## 🔐 Sistema de Roles y Permisos
 
 ### Usuario (No logueado)
 - Navegar por el catálogo
@@ -175,116 +129,109 @@ RewriteRule . /index.html [L]
 - Todas las funcionalidades de usuario
 - Ver detalles completos de vehículos
 - Contactar por WhatsApp/Facebook
-- Guardar favoritos
+- Guardar y gestionar favoritos
+- Acceso completo a Galería y Blog
 
 ### Administrador
 - Todas las funcionalidades de cliente
 - Acceso al panel de administración
 - Gestionar vehículos (crear, editar, eliminar)
-- Ver estadísticas
-- Subir imágenes
+- Ver estadísticas y métricas
+- Subir imágenes y contenido multimedia
+- Gestionar Galería y Blog
 
-## 🔧 Configuración de Firebase
-
-### 1. Crear Proyecto
-1. Ve a [Firebase Console](https://console.firebase.google.com/)
-2. Crea un nuevo proyecto
-3. Habilita Authentication, Firestore y Storage
-
-### 2. Configurar Authentication
-1. Ve a Authentication > Sign-in method
-2. Habilita Email/Password
-3. Configura plantillas de email para recuperación de contraseña
-
-### 3. Configurar Firestore
-1. Ve a Firestore Database
-2. Crea una base de datos en modo de producción
-3. Configura las reglas de seguridad (ver arriba)
-
-### 4. Configurar Storage
-1. Ve a Storage
-2. Inicia Storage
-3. Configura las reglas de seguridad (ver arriba)
-
-### 5. Obtener Credenciales
-1. Ve a Project Settings
-2. En la sección "Your apps", agrega una app web
-3. Copia la configuración y actualiza `src/firebase/config.js`
+### Owner
+- Acceso completo al sistema
+- Gestión de usuarios y roles
+- Configuración del sistema
+- Control total de todas las funcionalidades
 
 ## 📱 Características Responsive
 
-La aplicación está completamente optimizada para:
+### Breakpoints Optimizados
 - **Desktop**: 1024px y superior
 - **Tablet**: 768px - 1023px
 - **Mobile**: 320px - 767px
 
-## 🎨 Personalización
+### Adaptaciones Específicas
+- **Navegación**: Menú hamburguesa en móviles
+- **Formularios**: Campos apilados en pantallas pequeñas
+- **Galerías**: Touch gestures optimizados
+- **Botones**: Tamaños adaptados para uso táctil
 
-### Colores
-Los colores principales se pueden modificar en `tailwind.config.js`:
+## 🎨 Personalización y Branding
+
+### Configuración de Colores
 ```javascript
+// tailwind.config.js
 colors: {
   primary: {
     50: '#eff6ff',
-    // ... más tonos
-    900: '#1e3a8a',
+    500: '#3b82f6',
+    600: '#2563eb',
+    700: '#1d4ed8',
   }
 }
 ```
 
-### Logo y Branding
-- Actualizar logo en `src/components/layout/Navbar.js`
-- Modificar información de contacto en `src/components/layout/Footer.js`
-- Actualizar datos de la empresa en `src/pages/About.js`
+### Elementos Personalizables
+- **Logo**: Componente Navbar
+- **Información de Contacto**: Footer
+- **Datos de Empresa**: Página About
+- **Colores Corporativos**: Variables CSS
+- **Contenido**: Textos y descripciones
 
-## 🔒 Seguridad
+## 🔒 Seguridad y Validación
 
-- Autenticación con Firebase Auth
-- Reglas de seguridad en Firestore y Storage
-- Validación de formularios en frontend
-- Protección de rutas por roles
-- Sanitización de datos
+### Autenticación
+- **Supabase Auth**: Sistema robusto de autenticación
+- **JWT Tokens**: Manejo seguro de sesiones
+- **Protección de Rutas**: Middleware por roles
 
-## 📊 Analytics y SEO
+### Validación de Datos
+- **Frontend**: React Hook Form con validaciones
+- **Backend**: Reglas de seguridad en Supabase
+- **Sanitización**: Limpieza de datos de entrada
 
-- Meta tags optimizados para SEO
-- Open Graph tags para redes sociales
-- Estructura semántica HTML
-- URLs amigables con React Router
+### Seguridad de Base de Datos
+- **Row Level Security**: Políticas granulares
+- **Validación de Tipos**: TypeScript-like constraints
+- **Backup Automático**: Respaldos programados
 
-## 🤝 Contribución
+## 📊 Analytics y Métricas
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+### Tracking Integrado
+- **Visitas por Vehículo**: Contador automático
+- **Popularidad de Contenido**: Blog y galería
+- **Engagement de Usuarios**: Favoritos y interacciones
+- **Estadísticas de Administrador**: Dashboard completo
 
-## 📄 Licencia
+### SEO Optimizado
+- **Meta Tags**: Dinámicos por página
+- **Open Graph**: Compartir en redes sociales
+- **Estructura Semántica**: HTML5 semántico
+- **URLs Amigables**: React Router con slugs
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+## 🚀 Funcionalidades Avanzadas
 
-## 📞 Soporte
+### Sistema de Búsqueda
+- **Filtros en Tiempo Real**: Actualización instantánea
+- **Búsqueda por Texto**: Marca, modelo, características
+- **Filtros Combinados**: Múltiples criterios simultáneos
 
-Para soporte técnico o consultas:
-- Email: soporte@ricarsautomotores.com
-- WhatsApp: +54 11 1234-5678
+### Gestión de Imágenes
+- **Optimización Automática**: Compresión y redimensionado
+- **Formatos Soportados**: JPG, PNG, WebP
+- **Almacenamiento Cloud**: Supabase Storage
+- **Lazy Loading**: Carga eficiente de imágenes
 
-## 🔄 Actualizaciones
-
-Para mantener el proyecto actualizado:
-
-```bash
-# Actualizar dependencias
-npm update
-
-# Verificar vulnerabilidades
-npm audit
-
-# Actualizar a versiones más recientes
-npm audit fix
-```
+### Sistema de Notificaciones
+- **Toast Notifications**: Feedback inmediato
+- **Estados de Carga**: Loading spinners
+- **Mensajes de Error**: Información clara al usuario
 
 ---
 
-**Desarrollado con ❤️ para Ricars Automóviles**
+**Desarrollado con React, Supabase y Tailwind CSS**
+
+*Ricars Automóviles - Plataforma Web Profesional*

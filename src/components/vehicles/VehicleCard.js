@@ -1,9 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Calendar, Gauge } from 'lucide-react';
+import { Star, MapPin, Calendar, Gauge, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { addToFavorites, removeFromFavorites, isFavorite } from '../../services/favoritesService';
+import toast from 'react-hot-toast';
 
 const VehicleCard = ({ vehicle, compact = false }) => {
+  const { currentUser } = useAuth();
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (currentUser) {
+        try {
+          const favorited = await isFavorite(vehicle.id);
+          setIsFavorited(favorited);
+        } catch (error) {
+          console.error('Error verificando favorito:', error);
+        }
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [vehicle.id, currentUser]);
+
+  const handleFavoriteClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      toast.error('Debes iniciar sesión para guardar favoritos');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isFavorited) {
+        await removeFromFavorites(vehicle.id);
+        setIsFavorited(false);
+        toast.success('Removido de favoritos');
+      } else {
+        await addToFavorites(vehicle.id);
+        setIsFavorited(true);
+        toast.success('Agregado a favoritos');
+      }
+    } catch (error) {
+      console.error('Error manejando favorito:', error);
+      toast.error('Error al actualizar favoritos');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatPrice = (price, currency = 'USD') => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -35,7 +85,7 @@ const VehicleCard = ({ vehicle, compact = false }) => {
               className="w-full h-32 object-cover"
               loading="lazy"
             />
-            {vehicle.featured && (
+            {vehicle.is_featured && (
               <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-semibold flex items-center">
                 <Star className="w-3 h-3 mr-1" />
                 Destacado
@@ -50,12 +100,27 @@ const VehicleCard = ({ vehicle, compact = false }) => {
               {vehicle.year} • {vehicle.kilometers.toLocaleString()} km
             </p>
             <div className="flex justify-between items-center">
-              <span className="text-lg font-bold text-primary-600">
-                {formatPrice(vehicle.price)}
-              </span>
-              <span className="text-xs text-gray-500">
-                {formatPriceARS(vehicle.price)}
-              </span>
+              <div>
+                <span className="text-lg font-bold text-primary-600">
+                  {formatPrice(vehicle.price)}
+                </span>
+                <span className="text-xs text-gray-500 block">
+                  {formatPriceARS(vehicle.price)}
+                </span>
+              </div>
+              {currentUser && (
+                <button
+                  onClick={handleFavoriteClick}
+                  disabled={isLoading}
+                  className={`p-2 rounded-full transition-colors duration-200 ${
+                    isFavorited 
+                      ? 'text-red-600 bg-red-50' 
+                      : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+                </button>
+              )}
             </div>
           </div>
         </Link>
@@ -77,13 +142,13 @@ const VehicleCard = ({ vehicle, compact = false }) => {
             className="w-full h-48 object-cover"
             loading="lazy"
           />
-          {vehicle.featured && (
+          {vehicle.is_featured && (
             <div className="absolute top-3 left-3 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
               <Star className="w-4 h-4 mr-1" />
               Destacado
             </div>
           )}
-          {vehicle.promotion && (
+          {vehicle.is_promotion && (
             <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
               Oferta
             </div>
@@ -96,7 +161,7 @@ const VehicleCard = ({ vehicle, compact = false }) => {
               <h3 className="text-xl font-bold text-gray-900 mb-1">
                 {vehicle.brand} {vehicle.model}
               </h3>
-              <p className="text-gray-600">{vehicle.version}</p>
+              <p className="text-gray-600">{vehicle.engine || ''}</p>
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-primary-600">
@@ -146,9 +211,24 @@ const VehicleCard = ({ vehicle, compact = false }) => {
             <span className="text-sm text-gray-500">
               {vehicle.condition === 'new' ? 'Nuevo' : 'Usado'}
             </span>
-            <span className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors duration-200">
-              Ver detalles →
-            </span>
+            <div className="flex items-center space-x-2">
+              {currentUser && (
+                <button
+                  onClick={handleFavoriteClick}
+                  disabled={isLoading}
+                  className={`p-2 rounded-full transition-colors duration-200 ${
+                    isFavorited 
+                      ? 'text-red-600 bg-red-50' 
+                      : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+                </button>
+              )}
+              <span className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors duration-200">
+                Ver detalles →
+              </span>
+            </div>
           </div>
         </div>
       </Link>

@@ -7,13 +7,17 @@ import Home from './pages/Home';
 import Catalog from './pages/Catalog';
 import VehicleDetail from './pages/VehicleDetail';
 import About from './pages/About';
+import Gallery from './pages/Gallery';
+import Blog from './pages/Blog';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/admin/AdminPanel';
+import UserManagement from './pages/admin/UserManagement';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
+import OwnerRoute from './components/auth/OwnerRoute';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 function App() {
@@ -45,23 +49,33 @@ function App() {
             <Route path="/catalogo" element={<Catalog />} />
             <Route path="/vehiculo/:id" element={<VehicleDetail />} />
             <Route path="/nosotros" element={<About />} />
-                                    <Route path="/login" element={<Login />} />
-                        <Route path="/registro" element={<Register />} />
-                        <Route path="/reset-password" element={<ResetPassword />} />
-                        <Route
-                          path="/perfil"
-                          element={
-                            <ProtectedRoute>
-                              <Profile />
-                            </ProtectedRoute>
-                          }
-                        />
+            <Route path="/galeria" element={<Gallery />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Register />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route
+              path="/perfil"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin"
               element={
                 <AdminRoute>
                   <AdminPanel />
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <OwnerRoute>
+                  <UserManagement />
+                </OwnerRoute>
               }
             />
           </Routes>

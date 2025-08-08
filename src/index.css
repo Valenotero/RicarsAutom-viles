@@ -38,6 +38,36 @@
   .select-field {
     @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white;
   }
+
+  /* Estilos para las opciones de los dropdowns */
+  .select-field option {
+    @apply text-gray-900 bg-white py-2 px-3;
+  }
+
+  .select-field option:hover {
+    @apply bg-blue-50;
+  }
+
+  .select-field option:checked {
+    @apply bg-blue-100 text-blue-900;
+  }
+
+  /* Estilos específicos para dropdowns en formularios de búsqueda */
+  .search-select {
+    @apply w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900;
+  }
+
+  .search-select option {
+    @apply text-gray-900 bg-white py-3 px-4 text-base;
+  }
+
+  .search-select option:hover {
+    @apply bg-blue-50 text-blue-900;
+  }
+
+  .search-select option:checked {
+    @apply bg-blue-100 text-blue-900 font-medium;
+  }
 }
 
 /* Custom scrollbar */
