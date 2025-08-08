@@ -48,25 +48,21 @@ npm start
 
 ## 🚀 Despliegue
 
-### GitHub Pages
+Para desplegar la aplicación, puedes usar cualquier plataforma de hosting que soporte aplicaciones React como:
 
-1. Instala gh-pages:
+- **Vercel**: Conecta tu repositorio y despliega automáticamente
+- **Netlify**: Arrastra y suelta la carpeta `build` o conecta tu repositorio
+- **Firebase Hosting**: Usa Firebase CLI para desplegar
+- **GitHub Pages**: Configura manualmente con gh-pages
+- **AWS S3 + CloudFront**: Para hosting empresarial
+
+### Build para producción
+
 ```bash
-npm install --save-dev gh-pages
+npm run build
 ```
 
-2. Actualiza el `homepage` en `package.json` con tu URL de GitHub Pages
-
-3. Despliega:
-```bash
-npm run deploy
-```
-
-### Vercel
-
-1. Conecta tu repositorio a Vercel
-2. Configura las variables de entorno en el dashboard de Vercel
-3. Vercel detectará automáticamente que es una aplicación React
+Esto generará la carpeta `build` con los archivos optimizados para producción.
 
 ## 📁 Estructura del Proyecto
 
