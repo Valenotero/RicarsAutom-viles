@@ -9,10 +9,10 @@ import {
   Star, 
   Share2, 
   Heart,
-  ExternalLink,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { FacebookIcon, WhatsAppIcon, MercadoLibreIcon } from '../components/icons/SocialIcons';
 import { motion } from 'framer-motion';
 import VehicleCard from '../components/vehicles/VehicleCard';
 import { getVehicleById, getSimilarVehicles } from '../services/vehicleService';
@@ -310,7 +310,7 @@ const VehicleDetail = () => {
                 onClick={handleWhatsAppContact}
                 className="flex-1 btn-primary flex items-center justify-center"
               >
-                <Phone className="w-5 h-5 mr-2" />
+                <WhatsAppIcon className="w-5 h-5 mr-2" />
                 Contactar por WhatsApp
               </button>
               
@@ -336,7 +336,7 @@ const VehicleDetail = () => {
                 onClick={handleFacebookContact}
                 className="flex-1 btn-secondary flex items-center justify-center"
               >
-                <ExternalLink className="w-5 h-5 mr-2" />
+                <FacebookIcon className="w-5 h-5 mr-2" />
                 Facebook
               </button>
               
@@ -344,7 +344,7 @@ const VehicleDetail = () => {
                 onClick={handleMercadoLibreContact}
                 className="flex-1 btn-secondary flex items-center justify-center"
               >
-                <ExternalLink className="w-5 h-5 mr-2" />
+                <MercadoLibreIcon className="w-5 h-5 mr-2" />
                 MercadoLibre
               </button>
             </div>

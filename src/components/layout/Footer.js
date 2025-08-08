@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, MapPin, Phone, Mail, ExternalLink } from 'lucide-react';
+import { Instagram, MapPin, Phone, Mail } from 'lucide-react';
+import { FacebookIcon, WhatsAppIcon, MercadoLibreIcon } from '../icons/SocialIcons';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -15,19 +16,19 @@ const Footer = () => {
     {
       name: 'Facebook',
       href: 'https://facebook.com/ricarsautomotores',
-      icon: Facebook,
+      icon: FacebookIcon,
       color: 'hover:text-blue-600'
     },
     {
       name: 'WhatsApp',
       href: 'https://wa.me/5491112345678',
-      icon: ExternalLink,
+      icon: WhatsAppIcon,
       color: 'hover:text-green-600'
     },
     {
       name: 'MercadoLibre',
       href: 'https://www.mercadolibre.com.ar/perfil/ricars-automotores',
-      icon: ExternalLink,
+      icon: MercadoLibreIcon,
       color: 'hover:text-yellow-600'
     }
   ];
