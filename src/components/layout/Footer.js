@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, MapPin, Phone, Mail } from 'lucide-react';
-import { FacebookIcon, WhatsAppIcon, MercadoLibreIcon } from '../icons/SocialIcons';
+import { FacebookIcon, WhatsAppIcon, MercadoLibreIcon } from '../../components/icons/SocialIcons';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
