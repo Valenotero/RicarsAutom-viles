@@ -12,6 +12,7 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userRole, setUserRole] = useState('usuario');
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -144,26 +145,32 @@ export function AuthProvider({ children }) {
           setCurrentUser(session.user);
           console.log('👤 Usuario autenticado:', session.user.email);
           
-          // Forzar owner (dueño) directamente para tu email
+          // Para el owner, usar el nombre real desde los metadatos
           if (session.user.email === 'oterov101@gmail.com') {
             setUserRole('owner');
-            console.log('👑 OWNER FORZADO para oterov101@gmail.com');
+            setUserProfile({
+              display_name: session.user.user_metadata?.display_name || 'Valentin Otero',
+              email: session.user.email,
+              role: 'owner'
+            });
+            console.log('👑 OWNER configurado para oterov101@gmail.com');
             return;
           }
           
-          // Obtener rol desde la base de datos para otros usuarios
+          // Obtener perfil desde la base de datos para otros usuarios
           try {
-            const { data: profile, error } = await authService.getUserProfile(session.user.id);
-            if (error) {
-              console.warn('⚠️ No se pudo obtener perfil, usando rol cliente por defecto');
-              setUserRole('cliente');
-            } else {
-              console.log('✅ Rol obtenido desde DB:', profile.role);
-              setUserRole(profile.role || 'cliente');
-            }
+            const profile = await authService.getUserProfile(session.user.id);
+            console.log('✅ Perfil obtenido desde DB:', profile);
+            setUserRole(profile.role || 'cliente');
+            setUserProfile(profile);
           } catch (profileError) {
-            console.warn('⚠️ Error obteniendo perfil, usando rol cliente por defecto:', profileError);
+            console.warn('⚠️ Error obteniendo perfil, usando perfil básico por defecto:', profileError);
             setUserRole('cliente');
+            setUserProfile({
+              display_name: session.user.user_metadata?.display_name || 'Usuario',
+              email: session.user.email,
+              role: 'cliente'
+            });
           }
         }
       } catch (error) {
@@ -187,26 +194,38 @@ export function AuthProvider({ children }) {
       if (event === 'SIGNED_IN' && session?.user) {
         setCurrentUser(session.user);
         
-        // Forzar owner (dueño) directamente para tu email
+        // Para el owner, usar el nombre real desde los metadatos
         if (session.user.email === 'oterov101@gmail.com') {
           setUserRole('owner');
-          console.log('👑 OWNER FORZADO en onChange para oterov101@gmail.com');
+          setUserProfile({
+            display_name: session.user.user_metadata?.display_name || 'Valentin Otero',
+            email: session.user.email,
+            role: 'owner'
+          });
+          console.log('👑 OWNER configurado en onChange para oterov101@gmail.com');
           return;
         }
         
-        // Obtener rol desde la base de datos para otros usuarios
+        // Obtener perfil desde la base de datos para otros usuarios
         try {
           const profile = await authService.getUserProfile(session.user.id);
-          console.log('✅ Rol obtenido desde DB en onChange:', profile.role);
+          console.log('✅ Perfil obtenido desde DB en onChange:', profile);
           setUserRole(profile.role || 'cliente');
+          setUserProfile(profile);
         } catch (profileError) {
-          console.warn('⚠️ Error obteniendo perfil en onChange, usando rol cliente por defecto:', profileError);
+          console.warn('⚠️ Error obteniendo perfil en onChange, usando perfil básico por defecto:', profileError);
           setUserRole('cliente');
+          setUserProfile({
+            display_name: session.user.user_metadata?.display_name || 'Usuario',
+            email: session.user.email,
+            role: 'cliente'
+          });
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('🔓 SIGNED_OUT detectado, limpiando estado...');
         setCurrentUser(null);
         setUserRole('usuario');
+        setUserProfile(null);
         setIsLoggingOut(false);
       }
     });
@@ -220,6 +239,7 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     userRole,
+    userProfile,
     signup,
     login,
     logout,
