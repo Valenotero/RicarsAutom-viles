@@ -157,23 +157,32 @@ export const addToRecentlyViewed = async (vehicleId) => {
       return { success: true };
     }
 
-    // Usar upsert para evitar duplicados y problemas de concurrencia
+    // Eliminar cualquier registro existente para este vehículo y usuario
+    await supabase
+      .from('recently_viewed')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('vehicle_id', vehicleId);
+
+    // Insertar nuevo registro
     const { error } = await supabase
       .from('recently_viewed')
-      .upsert({
+      .insert({
         user_id: user.id,
         vehicle_id: vehicleId,
         viewed_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id,vehicle_id'
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error insertando registro:', error);
+      throw error;
+    }
 
     return { success: true };
   } catch (error) {
     console.error('Error agregando a vistos recientemente:', error);
-    throw error;
+    // No lanzar el error para evitar que rompa la aplicación
+    return { success: false, error: error.message };
   }
 };
 
