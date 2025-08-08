@@ -1,0 +1,260 @@
+import { supabase } from '../supabase/config';
+
+// Servicio para manejar favoritos y vehículos vistos recientemente
+
+export const addToFavorites = async (vehicleId) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data, error } = await supabase
+      .from('favorites')
+      .insert({
+        user_id: user.id,
+        vehicle_id: vehicleId
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        // Ya existe en favoritos
+        return { success: true, message: 'Ya está en favoritos' };
+      }
+      throw error;
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error agregando a favoritos:', error);
+    throw error;
+  }
+};
+
+export const removeFromFavorites = async (vehicleId) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { error } = await supabase
+      .from('favorites')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('vehicle_id', vehicleId);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error removiendo de favoritos:', error);
+    throw error;
+  }
+};
+
+export const getFavorites = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('favorites')
+      .select(`
+        *,
+        vehicles (
+          id,
+          brand,
+          model,
+          year,
+          price,
+          price_ars,
+          kilometers,
+          images,
+          condition,
+          transmission,
+          fuel_type,
+          color,
+          type,
+          location,
+          engine,
+          power,
+          features,
+          is_featured,
+          is_promotion
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return data.map(item => ({
+      ...item.vehicles,
+      favorite_id: item.id,
+      favorited_at: item.created_at
+    }));
+  } catch (error) {
+    console.error('Error obteniendo favoritos:', error);
+    return [];
+  }
+};
+
+export const isFavorite = async (vehicleId) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return false;
+    }
+
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('vehicle_id', vehicleId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('Error verificando favorito:', error);
+    return false;
+  }
+};
+
+export const addToRecentlyViewed = async (vehicleId) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      // Si no hay usuario autenticado, guardar en localStorage
+      const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+      const vehicle = recentlyViewed.find(v => v.id === vehicleId);
+      
+      if (!vehicle) {
+        // Necesitamos obtener los datos del vehículo
+        const { data: vehicleData } = await supabase
+          .from('vehicles')
+          .select('*')
+          .eq('id', vehicleId)
+          .single();
+        
+        if (vehicleData) {
+          const updatedRecentlyViewed = [
+            vehicleData,
+            ...recentlyViewed.filter(v => v.id !== vehicleId)
+          ].slice(0, 10); // Mantener solo los últimos 10
+          
+          localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecentlyViewed));
+        }
+      }
+      return { success: true };
+    }
+
+    const { error } = await supabase
+      .from('recently_viewed')
+      .insert({
+        user_id: user.id,
+        vehicle_id: vehicleId
+      });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error agregando a vistos recientemente:', error);
+    throw error;
+  }
+};
+
+export const getRecentlyViewed = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      // Si no hay usuario autenticado, obtener de localStorage
+      return JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+    }
+
+    const { data, error } = await supabase
+      .from('recently_viewed')
+      .select(`
+        *,
+        vehicles (
+          id,
+          brand,
+          model,
+          year,
+          price,
+          price_ars,
+          kilometers,
+          images,
+          condition,
+          transmission,
+          fuel_type,
+          color,
+          type,
+          location,
+          engine,
+          power,
+          features,
+          is_featured,
+          is_promotion
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('viewed_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    return data.map(item => ({
+      ...item.vehicles,
+      viewed_at: item.viewed_at
+    }));
+  } catch (error) {
+    console.error('Error obteniendo vistos recientemente:', error);
+    return [];
+  }
+};
+
+export const getFavoritesStats = async () => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_favorites_stats');
+
+    if (error) throw error;
+
+    return data[0] || { total_favorites: 0, total_users_with_favorites: 0 };
+  } catch (error) {
+    console.error('Error obteniendo estadísticas de favoritos:', error);
+    return { total_favorites: 0, total_users_with_favorites: 0 };
+  }
+};
+
+export const clearRecentlyViewed = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      localStorage.removeItem('recentlyViewed');
+      return { success: true };
+    }
+
+    const { error } = await supabase
+      .from('recently_viewed')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error limpiando vistos recientemente:', error);
+    throw error;
+  }
+};
