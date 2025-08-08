@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.css": "/static/css/main.10fc628b.css",
-    "main.js": "/static/js/main.fa35fb90.js",
-    "index.html": "/index.html",
-    "main.10fc628b.css.map": "/static/css/main.10fc628b.css.map",
-    "main.fa35fb90.js.map": "/static/js/main.fa35fb90.js.map"
+    "main.css": "/RicarsAutom-viles/static/css/main.10fc628b.css",
+    "main.js": "/RicarsAutom-viles/static/js/main.fa35fb90.js",
+    "index.html": "/RicarsAutom-viles/index.html",
+    "main.10fc628b.css.map": "/RicarsAutom-viles/static/css/main.10fc628b.css.map",
+    "main.fa35fb90.js.map": "/RicarsAutom-viles/static/js/main.fa35fb90.js.map"
   },
   "entrypoints": [
     "static/css/main.10fc628b.css",
