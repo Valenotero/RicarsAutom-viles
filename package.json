@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "Plataforma web para Ricars Automóviles - Concesionaria de vehículos",
     "private": true,
-    "homepage": "https://tu-usuario.github.io/ri-cars-automotores",
+    "homepage": "https://valenotero.github.io/RicarsAutom-viles",
     "dependencies": {
         "@supabase/supabase-js": "^2.54.0",
         "@testing-library/jest-dom": "^5.16.4",
