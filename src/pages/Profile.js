@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Eye, Heart, Calendar, Mail, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Eye, Heart, Calendar, Mail, Trash2, AlertTriangle, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getFavorites, getRecentlyViewed, cleanDuplicateRecentlyViewed } from '../services/favoritesService';
 import VehicleCard from '../components/vehicles/VehicleCard';
 import toast from 'react-hot-toast';
@@ -280,7 +280,11 @@ const Profile = () => {
             {favorites.length > 0 ? (
               <div className="space-y-3">
                 {favorites.slice(0, 3).map((vehicle, index) => (
-                  <div key={`favorite-${vehicle.id}-${index}`} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                  <Link 
+                    key={`favorite-${vehicle.id}-${index}`} 
+                    to={`/vehiculo/${vehicle.id}`}
+                    className="block border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <img
@@ -306,12 +310,18 @@ const Profile = () => {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
                 {favorites.length > 3 && (
-                  <p className="text-sm text-gray-500 text-center">
-                    +{favorites.length - 3} más favoritos
-                  </p>
+                  <Link 
+                    to="/favoritos" 
+                    className="block text-center py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors font-medium"
+                  >
+                    <div className="flex items-center justify-center space-x-2">
+                      <span>Ver todos los {favorites.length} favoritos</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </Link>
                 )}
               </div>
             ) : (

@@ -13,6 +13,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/Profile';
+import Favorites from './pages/Favorites';
 import AdminPanel from './pages/admin/AdminPanel';
 import UserManagement from './pages/admin/UserManagement';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -59,6 +60,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/favoritos"
+              element={
+                <ProtectedRoute>
+                  <Favorites />
                 </ProtectedRoute>
               }
             />
