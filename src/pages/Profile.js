@@ -163,14 +163,14 @@ const Profile = () => {
             <div className="bg-primary-100 rounded-full p-4 mr-4">
               <User className="w-8 h-8 text-primary-600" />
             </div>
-                         <div>
-               <h1 className="text-2xl font-bold text-gray-900">
-                 Mi Perfil
-               </h1>
-               <p className="text-gray-600">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Mi Perfil
+              </h1>
+              <p className="text-gray-600">
                  Bienvenido de vuelta, {userProfile?.display_name || currentUser.email}
-               </p>
-             </div>
+              </p>
+            </div>
           </div>
         </div>
 
@@ -180,26 +180,26 @@ const Profile = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Información Personal
             </h2>
-                         <div className="space-y-3">
-               <div className="flex items-center">
+            <div className="space-y-3">
+              <div className="flex items-center">
                  <User className="w-5 h-5 text-gray-400 mr-3" />
                  <span className="text-gray-700 font-medium">{userProfile?.display_name || 'Usuario'}</span>
                </div>
                <div className="flex items-center">
-                 <Mail className="w-5 h-5 text-gray-400 mr-3" />
-                 <span className="text-gray-700">{currentUser.email}</span>
-               </div>
-               <div className="flex items-center">
-                 <User className="w-5 h-5 text-gray-400 mr-3" />
-                 <span className="text-gray-700 capitalize">{userRole}</span>
-               </div>
-               <div className="flex items-center">
-                 <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                 <span className="text-gray-700">
-                   Miembro desde {new Date(currentUser.created_at || Date.now()).toLocaleDateString()}
-                 </span>
-               </div>
-             </div>
+                <Mail className="w-5 h-5 text-gray-400 mr-3" />
+                <span className="text-gray-700">{currentUser.email}</span>
+              </div>
+              <div className="flex items-center">
+                <User className="w-5 h-5 text-gray-400 mr-3" />
+                <span className="text-gray-700 capitalize">{userRole}</span>
+              </div>
+              <div className="flex items-center">
+                <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+                <span className="text-gray-700">
+                  Miembro desde {new Date(currentUser.created_at || Date.now()).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
