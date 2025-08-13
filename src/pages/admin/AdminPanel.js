@@ -13,7 +13,8 @@ import {
   BarChart3,
   Image,
   FileText,
-  Heart
+  Heart,
+  MessageCircle
 } from 'lucide-react';
 import { getVehicles, getVehicleStats, deleteVehicle } from '../../services/vehicleService';
 import { getFavoritesStats } from '../../services/favoritesService';
@@ -259,6 +260,7 @@ const AdminPanel = () => {
               { id: 'vehicles', label: 'Vehículos', icon: Car },
               { id: 'gallery', label: 'Galería', icon: Image },
               { id: 'blog', label: 'Blog', icon: FileText },
+              { id: 'contact-messages', label: 'Mensajes', icon: MessageCircle },
               { id: 'stats', label: 'Estadísticas', icon: TrendingUp }
             ].map((tab) => (
               <button
@@ -850,6 +852,27 @@ const AdminPanel = () => {
                   </table>
                 </div>
               )}
+            </div>
+          </motion.div>
+        )}
+
+        {selectedTab === 'contact-messages' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="text-center py-12">
+              <MessageCircle className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Mensajes de Contacto</h3>
+              <p className="text-gray-500 mb-4">Gestiona las consultas de los clientes sobre los vehículos</p>
+              <a
+                href="/admin/contact-messages"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Ver Mensajes
+              </a>
             </div>
           </motion.div>
         )}

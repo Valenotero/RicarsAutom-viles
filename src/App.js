@@ -12,10 +12,12 @@ import Blog from './pages/Blog';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
+import UpdatePassword from './pages/auth/UpdatePassword';
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
 import AdminPanel from './pages/admin/AdminPanel';
 import UserManagement from './pages/admin/UserManagement';
+import ContactMessages from './pages/admin/ContactMessages';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import OwnerRoute from './components/auth/OwnerRoute';
@@ -55,6 +57,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Register />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/update-password" element={<UpdatePassword />} />
             <Route
               path="/perfil"
               element={
@@ -85,6 +88,14 @@ function App() {
                 <OwnerRoute>
                   <UserManagement />
                 </OwnerRoute>
+              }
+            />
+            <Route
+              path="/admin/contact-messages"
+              element={
+                <AdminRoute>
+                  <ContactMessages />
+                </AdminRoute>
               }
             />
           </Routes>

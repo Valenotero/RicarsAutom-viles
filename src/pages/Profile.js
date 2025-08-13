@@ -16,6 +16,124 @@ const Profile = () => {
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [isChangingDisplayName, setIsChangingDisplayName] = useState(false);
+
+  // Funciones para editar perfil
+  const handleChangePassword = async () => {
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (!newPassword || !confirmPassword) {
+      toast.error('Por favor completa todos los campos');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('Las contraseñas no coinciden');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { supabase } = await import('../supabase/config');
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Contraseña actualizada exitosamente');
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+    } catch (error) {
+      console.error('Error cambiando contraseña:', error);
+      toast.error('Error al cambiar la contraseña: ' + error.message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleChangeEmail = async () => {
+    const newEmail = document.getElementById('newEmail').value;
+
+    if (!newEmail) {
+      toast.error('Por favor ingresa un nuevo email');
+      return;
+    }
+
+    if (newEmail === currentUser.email) {
+      toast.error('El nuevo email debe ser diferente al actual');
+      return;
+    }
+
+    setIsChangingEmail(true);
+    try {
+      const { supabase } = await import('../supabase/config');
+      const { error } = await supabase.auth.updateUser({
+        email: newEmail
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Email actualizado. Revisa tu nuevo email para confirmar el cambio');
+      document.getElementById('newEmail').value = '';
+    } catch (error) {
+      console.error('Error cambiando email:', error);
+      toast.error('Error al cambiar el email: ' + error.message);
+    } finally {
+      setIsChangingEmail(false);
+    }
+  };
+
+  const handleChangeDisplayName = async () => {
+    const newDisplayName = document.getElementById('newDisplayName').value;
+
+    if (!newDisplayName.trim()) {
+      toast.error('Por favor ingresa un nombre de usuario');
+      return;
+    }
+
+    if (newDisplayName === userProfile?.display_name) {
+      toast.error('El nuevo nombre debe ser diferente al actual');
+      return;
+    }
+
+    setIsChangingDisplayName(true);
+    try {
+      const { supabase } = await import('../supabase/config');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          display_name: newDisplayName.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentUser.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Nombre de usuario actualizado exitosamente');
+      // Recargar el perfil para mostrar el cambio
+      window.location.reload();
+    } catch (error) {
+      console.error('Error cambiando nombre de usuario:', error);
+      toast.error('Error al cambiar el nombre de usuario: ' + error.message);
+    } finally {
+      setIsChangingDisplayName(false);
+    }
+  };
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -359,6 +477,103 @@ const Profile = () => {
                 {userRole === 'owner' ? 'Dueño' : userRole === 'admin' ? 'Admin' : 'Cliente'}
               </div>
               <div className="text-sm text-gray-600">Tipo de Usuario</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Editar Perfil */}
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <User className="w-5 h-5 text-blue-600 mr-2" />
+            Editar Perfil
+          </h2>
+          
+          {/* Cambiar Contraseña */}
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-md font-medium text-gray-900 mb-3">Cambiar Contraseña</h3>
+            <div className="space-y-3">
+              <input
+                type="password"
+                placeholder="Nueva contraseña (mínimo 6 caracteres)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                minLength="6"
+                id="newPassword"
+              />
+              <input
+                type="password"
+                placeholder="Confirmar nueva contraseña"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                id="confirmPassword"
+              />
+              <button
+                onClick={handleChangePassword}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Cambiando...
+                  </div>
+                ) : (
+                  'Cambiar Contraseña'
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Cambiar Email */}
+          <div className="mb-6 p-4 bg-green-50 rounded-lg">
+            <h3 className="text-md font-medium text-gray-900 mb-3">Cambiar Email</h3>
+            <div className="space-y-3">
+              <input
+                type="email"
+                placeholder="Nuevo email"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                id="newEmail"
+              />
+              <button
+                onClick={handleChangeEmail}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium"
+                disabled={isChangingEmail}
+              >
+                {isChangingEmail ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Cambiando...
+                  </div>
+                ) : (
+                  'Cambiar Email'
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Cambiar Nombre de Usuario */}
+          <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+            <h3 className="text-md font-medium text-gray-900 mb-3">Cambiar Nombre de Usuario</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Nuevo nombre de usuario"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                id="newDisplayName"
+                defaultValue={userProfile?.display_name || ''}
+              />
+              <button
+                onClick={handleChangeDisplayName}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 font-medium"
+                disabled={isChangingDisplayName}
+              >
+                {isChangingDisplayName ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Cambiando...
+                  </div>
+                ) : (
+                  'Cambiar Nombre'
+                )}
+              </button>
             </div>
           </div>
         </div>

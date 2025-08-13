@@ -118,13 +118,19 @@ export const isFavorite = async (vehicleId) => {
       .eq('vehicle_id', vehicleId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      // Si es error de permisos o tabla no existe, retornar false
+      if (error.code === 'PGRST116' || error.message?.includes('406') || error.message?.includes('permission')) {
+        console.warn('⚠️ Error de permisos en favoritos, retornando false');
+        return false;
+      }
       throw error;
     }
 
     return !!data;
   } catch (error) {
     console.error('Error verificando favorito:', error);
+    // Para cualquier error, retornar false para evitar que rompa la UI
     return false;
   }
 };

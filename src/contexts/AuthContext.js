@@ -161,8 +161,15 @@ export function AuthProvider({ children }) {
           try {
             const profile = await authService.getUserProfile(session.user.id);
             console.log('✅ Perfil obtenido desde DB:', profile);
-            setUserRole(profile.role || 'cliente');
+            
+            // Asegurar que siempre haya un rol válido
+            const validRole = profile?.role && ['cliente', 'admin', 'owner'].includes(profile.role) 
+              ? profile.role 
+              : 'cliente';
+            
+            setUserRole(validRole);
             setUserProfile(profile);
+            console.log('🎯 Rol establecido:', validRole);
           } catch (profileError) {
             console.warn('⚠️ Error obteniendo perfil, usando perfil básico por defecto:', profileError);
             setUserRole('cliente');
@@ -171,7 +178,10 @@ export function AuthProvider({ children }) {
               email: session.user.email,
               role: 'cliente'
             });
+            console.log('🔄 Rol por defecto establecido: cliente');
           }
+        } else {
+          console.log('ℹ️ No hay sesión activa');
         }
       } catch (error) {
         console.error('❌ Error obteniendo sesión:', error);
@@ -191,6 +201,8 @@ export function AuthProvider({ children }) {
 
     // Escuchar cambios de autenticación
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
+      console.log('🔄 AuthStateChange:', event, session?.user?.email);
+      
       if (event === 'SIGNED_IN' && session?.user) {
         setCurrentUser(session.user);
         
@@ -210,8 +222,15 @@ export function AuthProvider({ children }) {
         try {
           const profile = await authService.getUserProfile(session.user.id);
           console.log('✅ Perfil obtenido desde DB en onChange:', profile);
-          setUserRole(profile.role || 'cliente');
+          
+          // Asegurar que siempre haya un rol válido
+          const validRole = profile?.role && ['cliente', 'admin', 'owner'].includes(profile.role) 
+            ? profile.role 
+            : 'cliente';
+          
+          setUserRole(validRole);
           setUserProfile(profile);
+          console.log('🎯 Rol establecido en onChange:', validRole);
         } catch (profileError) {
           console.warn('⚠️ Error obteniendo perfil en onChange, usando perfil básico por defecto:', profileError);
           setUserRole('cliente');
@@ -220,6 +239,7 @@ export function AuthProvider({ children }) {
             email: session.user.email,
             role: 'cliente'
           });
+          console.log('🔄 Rol por defecto establecido en onChange: cliente');
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('🔓 SIGNED_OUT detectado, limpiando estado...');

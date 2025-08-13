@@ -9,10 +9,14 @@ const ProtectedRoute = ({ children }) => {
     currentUser: currentUser?.email,
     userRole,
     isClient: isClient(),
-    loading
+    loading,
+    hasUser: !!currentUser,
+    userEmail: currentUser?.email,
+    userCreatedAt: currentUser?.created_at
   });
 
   if (loading) {
+    console.log('⏳ ProtectedRoute: Cargando...');
     return <div>Cargando...</div>;
   }
 
@@ -21,12 +25,20 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isClient()) {
-    console.log('🚫 ProtectedRoute: Usuario no es cliente/admin, redirigiendo a home');
+  // Verificar si el usuario tiene un rol válido
+  const hasValidRole = userRole && ['cliente', 'admin', 'owner'].includes(userRole);
+  console.log('🔍 ProtectedRoute: Verificación de rol:', {
+    userRole,
+    hasValidRole,
+    validRoles: ['cliente', 'admin', 'owner']
+  });
+
+  if (!hasValidRole) {
+    console.log('⚠️ ProtectedRoute: Usuario sin rol válido, redirigiendo a home');
     return <Navigate to="/" replace />;
   }
 
-  console.log('✅ ProtectedRoute: Acceso permitido');
+  console.log('✅ ProtectedRoute: Acceso permitido para rol:', userRole);
   return children;
 };
 

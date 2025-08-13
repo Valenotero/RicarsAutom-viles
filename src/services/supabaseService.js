@@ -47,6 +47,21 @@ export const authService = {
     console.log('🔍 Buscando perfil para userId:', userId);
     
     try {
+      // Primero verificar si es el owner
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email === 'oterov101@gmail.com') {
+        console.log('🔑 Retornando perfil owner para oterov101@gmail.com');
+        return {
+          id: userId,
+          email: 'oterov101@gmail.com',
+          display_name: 'Administrador Principal',
+          role: 'owner',
+          created_at: user.created_at,
+          updated_at: new Date().toISOString()
+        };
+      }
+
+      // Intentar obtener perfil desde la base de datos
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -56,39 +71,43 @@ export const authService = {
       if (error) {
         console.warn('⚠️ Error obteniendo perfil de DB:', error);
         
-        // Fallback: obtener usuario actual
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email === 'oterov101@gmail.com') {
-          console.log('🔑 Retornando perfil owner para oterov101@gmail.com');
+        // Si es error de permisos o tabla no existe, usar perfil básico
+        if (error.code === 'PGRST116' || error.message?.includes('406') || error.message?.includes('permission')) {
+          console.log('🔒 Error de permisos, usando perfil básico');
           return {
             id: userId,
-            email: 'oterov101@gmail.com',
-            display_name: 'Administrador Principal',
-            role: 'owner'
+            email: user?.email || '',
+            display_name: user?.user_metadata?.display_name || 'Usuario',
+            role: 'cliente',
+            created_at: user?.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
           };
         }
         
-        // Para otros usuarios, retornar perfil básico
-        return {
-          id: userId,
-          email: user?.email || 'usuario@example.com',
-          display_name: user?.user_metadata?.display_name || 'Usuario',
-          role: 'cliente'
-        };
+        throw error;
       }
 
       console.log('✅ Perfil encontrado:', data);
+      
+      // Asegurar que el perfil tenga un rol válido
+      if (!data.role || !['cliente', 'admin', 'owner'].includes(data.role)) {
+        console.log('⚠️ Perfil sin rol válido, estableciendo como cliente');
+        data.role = 'cliente';
+      }
+      
       return data;
     } catch (error) {
       console.warn('⚠️ Error en getUserProfile, usando fallback:', error);
       
-      // Fallback básico
+      // Fallback básico para cualquier error
       const { data: { user } } = await supabase.auth.getUser();
       return {
         id: userId,
-        email: user?.email || 'usuario@example.com',
+        email: user?.email || '',
         display_name: user?.user_metadata?.display_name || 'Usuario',
-        role: user?.email === 'oterov101@gmail.com' ? 'owner' : 'cliente'
+        role: user?.email === 'oterov101@gmail.com' ? 'owner' : 'cliente',
+        created_at: user?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
     }
   },
@@ -163,9 +182,29 @@ export const vehicleService = {
       console.error('❌ Error en query Supabase:', error);
       console.error('❌ Detalles del error:', error);
       
-      // Si hay error de permisos o conexión, lanzar el error
-      if (error.message?.includes('RLS') || error.message?.includes('policy') || error.message?.includes('permission')) {
-        console.log('🔒 Error de permisos RLS, necesario revisar configuración');
+      // Si hay error de permisos o conexión, intentar con fallback
+      if (error.message?.includes('RLS') || error.message?.includes('policy') || error.message?.includes('permission') || error.message?.includes('406')) {
+        console.log('🔒 Error de permisos RLS, intentando fallback...');
+        
+        // Fallback: intentar obtener solo vehículos básicos sin filtros complejos
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('vehicles')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(filters.limit || 50);
+          
+          if (fallbackError) {
+            console.error('❌ Fallback también falló:', fallbackError);
+            throw error; // Lanzar el error original
+          }
+          
+          console.log('✅ Fallback exitoso, datos recibidos:', fallbackData?.length || 0);
+          return fallbackData || [];
+        } catch (fallbackError) {
+          console.error('❌ Error en fallback:', fallbackError);
+          throw error; // Lanzar el error original
+        }
       }
       
       throw error;

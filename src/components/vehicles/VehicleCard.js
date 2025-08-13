@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Calendar, Gauge, Heart } from 'lucide-react';
+import { Star, MapPin, Calendar, Gauge, Heart, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { addToFavorites, removeFromFavorites, isFavorite } from '../../services/favoritesService';
 import toast from 'react-hot-toast';
+import ContactForm from './ContactForm';
 
 const VehicleCard = ({ vehicle, compact = false }) => {
   const { currentUser } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
@@ -225,6 +227,17 @@ const VehicleCard = ({ vehicle, compact = false }) => {
                   <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
                 </button>
               )}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowContactForm(true);
+                }}
+                className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors duration-200"
+                title="Consultar sobre este vehículo"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </button>
               <span className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors duration-200">
                 Ver detalles →
               </span>
@@ -232,6 +245,13 @@ const VehicleCard = ({ vehicle, compact = false }) => {
           </div>
         </div>
       </Link>
+      
+      {/* Formulario de contacto */}
+      <ContactForm
+        vehicle={vehicle}
+        isOpen={showContactForm}
+        onClose={() => setShowContactForm(false)}
+      />
     </motion.div>
   );
 };

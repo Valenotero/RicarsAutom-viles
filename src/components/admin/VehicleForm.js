@@ -885,9 +885,18 @@ const VehicleForm = ({ vehicle, onClose, onSuccess }) => {
                             alt={`Imagen existente ${index + 1}`}
                             className="w-16 h-16 object-cover rounded-md flex-shrink-0"
                             onError={(e) => {
-                              e.target.src = 'https://via.placeholder.com/64x64?text=Error';
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'block';
                             }}
                           />
+                          
+                          {/* Fallback para imagen con error */}
+                          <div 
+                            className="w-16 h-16 bg-gray-200 rounded-md flex-shrink-0 flex items-center justify-center text-xs text-gray-500 hidden"
+                            style={{ display: 'none' }}
+                          >
+                            Error
+                          </div>
                           
                           {/* Información de la imagen */}
                           <div className="ml-3 flex-1 min-w-0">
