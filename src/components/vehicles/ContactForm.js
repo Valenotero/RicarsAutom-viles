@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { contactService } from '../../services/contactService';
+import toast from 'react-hot-toast';
 
 const ContactForm = ({ vehicle, onClose, isOpen }) => {
   const [formData, setFormData] = useState({
@@ -33,6 +34,7 @@ const ContactForm = ({ vehicle, onClose, isOpen }) => {
 
       await contactService.sendContactMessage(messageData);
       setSubmitStatus('success');
+      toast.success('Mensaje enviado exitosamente');
       
       // Limpiar formulario
       setFormData({
@@ -51,6 +53,7 @@ const ContactForm = ({ vehicle, onClose, isOpen }) => {
     } catch (error) {
       console.error('Error enviando mensaje:', error);
       setSubmitStatus('error');
+      toast.error('Error al enviar el mensaje');
     } finally {
       setIsSubmitting(false);
     }

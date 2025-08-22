@@ -5,110 +5,198 @@ import { supabase } from '../supabase/config';
 export const authService = {
   // Registrar usuario
   async signUp(email, password, displayName) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: displayName
+    try {
+      console.log('🔐 Registrando usuario:', { email, displayName });
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName,
+            role: 'cliente' // Asignar rol por defecto
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // Si el registro fue exitoso, crear perfil en la base de datos
+      if (data.user) {
+        try {
+          console.log('✅ Usuario registrado, creando perfil en DB...');
+          
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: data.user.id,
+                email: data.user.email,
+                display_name: displayName,
+                role: 'cliente',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ]);
+
+          if (profileError) {
+            console.warn('⚠️ Error creando perfil en DB:', profileError);
+            // No lanzar error aquí, el usuario ya se registró
+          } else {
+            console.log('✅ Perfil creado exitosamente en DB');
+          }
+        } catch (profileError) {
+          console.warn('⚠️ Error en creación de perfil:', profileError);
+          // No lanzar error aquí, el usuario ya se registró
         }
       }
-    });
 
-    if (error) throw error;
-    return data;
+      return data;
+    } catch (error) {
+      console.error('❌ Error en registro:', error);
+      throw error;
+    }
   },
 
   // Iniciar sesión
   async signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    try {
+      console.log('🔐 Iniciando sesión:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      
+      console.log('✅ Login exitoso:', data.user?.email);
+      return data;
+    } catch (error) {
+      console.error('❌ Error en login:', error);
+      throw error;
+    }
   },
 
   // Cerrar sesión
   async signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      console.log('🚪 Cerrando sesión...');
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      console.log('✅ Sesión cerrada');
+    } catch (error) {
+      console.error('❌ Error cerrando sesión:', error);
+      throw error;
+    }
   },
 
   // Obtener sesión actual
   async getSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session;
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      return session;
+    } catch (error) {
+      console.error('❌ Error obteniendo sesión:', error);
+      throw error;
+    }
   },
 
-  // Obtener perfil de usuario - simplificado
+  // 🔧 MÉTODO CORREGIDO: Obtener perfil de usuario
   async getUserProfile(userId) {
-    console.log('🔍 Buscando perfil para userId:', userId);
-    
     try {
-      // Primero verificar si es el owner
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email === 'oterov101@gmail.com') {
-        console.log('🔑 Retornando perfil owner para oterov101@gmail.com');
-        return {
-          id: userId,
-          email: 'oterov101@gmail.com',
-          display_name: 'Administrador Principal',
-          role: 'owner',
-          created_at: user.created_at,
-          updated_at: new Date().toISOString()
-        };
+      console.log('🔍 [authService] Obteniendo perfil para userId:', userId);
+      
+      if (!userId) {
+        console.error('❌ [authService] No userId provided');
+        return null;
       }
 
-      // Intentar obtener perfil desde la base de datos
-      const { data, error } = await supabase
+      // Consulta directa y simple
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, display_name, role, created_at, updated_at')
         .eq('id', userId)
         .single();
 
       if (error) {
-        console.warn('⚠️ Error obteniendo perfil de DB:', error);
+        console.error('❌ [authService] Error obteniendo perfil:', error);
         
-        // Si es error de permisos o tabla no existe, usar perfil básico
-        if (error.code === 'PGRST116' || error.message?.includes('406') || error.message?.includes('permission')) {
-          console.log('🔒 Error de permisos, usando perfil básico');
-          return {
-            id: userId,
-            email: user?.email || '',
-            display_name: user?.user_metadata?.display_name || 'Usuario',
-            role: 'cliente',
-            created_at: user?.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
+        // Si el error es porque no existe el perfil, retornar null
+        if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          console.warn('⚠️ [authService] Perfil no encontrado para userId:', userId);
+          return null;
         }
         
         throw error;
       }
 
-      console.log('✅ Perfil encontrado:', data);
+      if (!profile) {
+        console.warn('⚠️ [authService] No se encontró perfil para userId:', userId);
+        return null;
+      }
+
+      // Validar que el perfil tenga un rol válido
+      if (!profile.role || !['cliente', 'admin', 'owner'].includes(profile.role)) {
+        console.warn('⚠️ [authService] Perfil con rol inválido, estableciendo como cliente');
+        profile.role = 'cliente';
+        
+        // Opcional: actualizar en la BD
+        try {
+          await supabase
+            .from('profiles')
+            .update({ role: 'cliente' })
+            .eq('id', userId);
+        } catch (updateError) {
+          console.warn('⚠️ [authService] No se pudo actualizar rol:', updateError);
+        }
+      }
+
+      console.log('✅ [authService] Perfil obtenido exitosamente:', {
+        id: profile.id,
+        email: profile.email,
+        role: profile.role,
+        display_name: profile.display_name
+      });
+
+      return profile;
+
+    } catch (error) {
+      console.error('❌ [authService] Error en getUserProfile:', error);
+      throw error;
+    }
+  },
+
+  // 🗑️ NUEVO: Eliminar cuenta de usuario completamente
+  async deleteUserAccount() {
+    try {
+      console.log('🗑️ Eliminando cuenta de usuario...');
       
-      // Asegurar que el perfil tenga un rol válido
-      if (!data.role || !['cliente', 'admin', 'owner'].includes(data.role)) {
-        console.log('⚠️ Perfil sin rol válido, estableciendo como cliente');
-        data.role = 'cliente';
+      // Obtener usuario actual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('No hay usuario logueado');
       }
       
-      return data;
-    } catch (error) {
-      console.warn('⚠️ Error en getUserProfile, usando fallback:', error);
+      console.log('🔍 Usuario a eliminar:', user.email);
       
-      // Fallback básico para cualquier error
-      const { data: { user } } = await supabase.auth.getUser();
-      return {
-        id: userId,
-        email: user?.email || '',
-        display_name: user?.user_metadata?.display_name || 'Usuario',
-        role: user?.email === 'oterov101@gmail.com' ? 'owner' : 'cliente',
-        created_at: user?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      // Llamar a la función de Supabase para eliminar completamente
+      const { data, error } = await supabase.rpc('delete_user_account', {
+        user_uuid: user.id
+      });
+      
+      if (error) {
+        console.error('❌ Error eliminando cuenta:', error);
+        throw error;
+      }
+      
+      console.log('✅ Cuenta eliminada exitosamente');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error en deleteUserAccount:', error);
+      throw error;
     }
   },
 
@@ -119,8 +207,15 @@ export const authService = {
 
   // Restablecer contraseña
   async resetPassword(email) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) throw error;
+    try {
+      console.log('📧 Enviando reset password para:', email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      console.log('✅ Email de reset enviado');
+    } catch (error) {
+      console.error('❌ Error en reset password:', error);
+      throw error;
+    }
   }
 };
 
@@ -543,6 +638,227 @@ export const statisticsService = {
         avg_views_per_item: 0, 
         total_unique_visitors: 0 
       };
+    }
+  }
+};
+
+// ==================== SERVICIO DE FAVORITOS ====================
+export const favoritesService = {
+  // Verificar si un vehículo está en favoritos
+  // Verificar si un vehículo está en favoritos
+async isFavorite(userId, vehicleId) {
+  try {
+    console.log('🔍 Verificando favorito:', { userId, vehicleId });
+    
+    // Versión simplificada para testing
+    const { data, error, count } = await supabase
+      .from('favorites')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('vehicle_id', vehicleId);
+
+    if (error) {
+      console.error('❌ Error verificando favorito:', error);
+      
+      // Fallback: asumir que no es favorito si hay error
+      console.log('⚠️ Asumiendo que no es favorito debido a error');
+      return false;
+    }
+
+    console.log('✅ Resultado isFavorite:', { count, esFavorito: count > 0 });
+    return count > 0;
+  } catch (error) {
+    console.error('❌ Error en isFavorite:', error);
+    return false;
+  }
+},
+
+  // Alternar favorito (agregar/quitar)
+  async toggleFavorite(userId, vehicleId) {
+    try {
+      console.log('🔄 Alternando favorito:', { userId, vehicleId });
+      
+      const isFav = await this.isFavorite(userId, vehicleId);
+      
+      if (isFav) {
+        // Quitar de favoritos
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('vehicle_id', vehicleId);
+        
+        if (error) throw error;
+        console.log('✅ Favorito eliminado');
+        return { action: 'removed', isFavorite: false };
+      } else {
+        // Agregar a favoritos
+        const { error } = await supabase
+          .from('favorites')
+          .insert([{ 
+            user_id: userId, 
+            vehicle_id: vehicleId 
+          }]);
+        
+        if (error) throw error;
+        console.log('✅ Favorito agregado');
+        return { action: 'added', isFavorite: true };
+      }
+    } catch (error) {
+      console.error('❌ Error en toggleFavorite:', error);
+      throw error;
+    }
+  },
+
+  // Obtener favoritos del usuario
+  async getUserFavorites(userId) {
+    try {
+      console.log('📋 Obteniendo favoritos del usuario:', userId);
+      
+      const { data, error } = await supabase
+        .from('favorites')
+        .select(`
+          id,
+          vehicle_id,
+          created_at,
+          vehicles (*)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error obteniendo favoritos:', error);
+        return [];
+      }
+      
+      console.log('✅ Favoritos obtenidos:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error en getUserFavorites:', error);
+      return [];
+    }
+  },
+
+  // Agregar a favoritos
+  async addFavorite(userId, vehicleId) {
+    try {
+      console.log('➕ Agregando favorito:', { userId, vehicleId });
+      
+      const { data, error } = await supabase
+        .from('favorites')
+        .insert([{
+          user_id: userId,
+          vehicle_id: vehicleId
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error agregando favorito:', error);
+        throw error;
+      }
+      
+      console.log('✅ Favorito agregado:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Error en addFavorite:', error);
+      throw error;
+    }
+  },
+
+  // Quitar de favoritos
+  async removeFavorite(userId, vehicleId) {
+    try {
+      console.log('➖ Quitando favorito:', { userId, vehicleId });
+      
+      const { error } = await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('vehicle_id', vehicleId);
+
+      if (error) {
+        console.error('❌ Error quitando favorito:', error);
+        throw error;
+      }
+      
+      console.log('✅ Favorito quitado exitosamente');
+    } catch (error) {
+      console.error('❌ Error en removeFavorite:', error);
+      throw error;
+    }
+  }
+};
+
+// ==================== SERVICIO DE VISTOS RECIENTEMENTE ====================
+export const recentlyViewedService = {
+  // Agregar vehículo a vistos recientemente
+  async addToRecentlyViewed(userId, vehicleId) {
+    try {
+      console.log('👁️ Agregando a vistos recientemente:', { userId, vehicleId });
+      
+      // Verificar si ya existe
+      const { data: existing } = await supabase
+        .from('recently_viewed')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('vehicle_id', vehicleId)
+        .single();
+
+      if (existing) {
+        // Si ya existe, actualizar la fecha
+        const { error: updateError } = await supabase
+          .from('recently_viewed')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Si no existe, crear nuevo registro
+        const { error: insertError } = await supabase
+          .from('recently_viewed')
+          .insert([{
+            user_id: userId,
+            vehicle_id: vehicleId
+          }]);
+
+        if (insertError) throw insertError;
+      }
+      
+      console.log('✅ Agregado a vistos recientemente');
+    } catch (error) {
+      console.error('❌ Error en addToRecentlyViewed:', error);
+      // No lanzar error aquí, es una funcionalidad secundaria
+    }
+  },
+
+  // Obtener vehículos vistos recientemente
+  async getRecentlyViewed(userId, limit = 10) {
+    try {
+      console.log('📋 Obteniendo vistos recientemente:', { userId, limit });
+      
+      const { data, error } = await supabase
+        .from('recently_viewed')
+        .select(`
+          id,
+          vehicle_id,
+          viewed_at,
+          vehicles (*)
+        `)
+        .eq('user_id', userId)
+        .order('viewed_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('❌ Error obteniendo vistos recientemente:', error);
+        return [];
+      }
+      
+      console.log('✅ Vistos recientemente obtenidos:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error en getRecentlyViewed:', error);
+      return [];
     }
   }
 };

@@ -67,6 +67,7 @@ const UpdatePassword = () => {
 
     } catch (error) {
       console.error('Error actualizando contraseña:', error);
+      toast.error('Error al actualizar la contraseña. Intenta nuevamente.');
       setError('Error al actualizar la contraseña. Intenta nuevamente.');
     } finally {
       setLoading(false);

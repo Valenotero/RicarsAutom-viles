@@ -107,30 +107,36 @@ export const getFavorites = async () => {
 export const isFavorite = async (vehicleId) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    
+    // Protección: verificar que hay usuario válido
+    if (!user || !user.id || typeof user.id !== 'string') {
+      console.log('⚠️ isFavorite: No hay usuario válido, retornando false');
       return false;
     }
 
-    const { data, error } = await supabase
+    console.log('🔍 Verificando favorito:', { 
+      userId: user.id.substring(0, 8) + '...', 
+      vehicleId: vehicleId.substring(0, 8) + '...' 
+    });
+
+    // Usar count en lugar de single para evitar errores
+    const { count, error } = await supabase
       .from('favorites')
-      .select('id')
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('vehicle_id', vehicleId)
-      .single();
+      .eq('vehicle_id', vehicleId);
 
     if (error) {
-      // Si es error de permisos o tabla no existe, retornar false
-      if (error.code === 'PGRST116' || error.message?.includes('406') || error.message?.includes('permission')) {
-        console.warn('⚠️ Error de permisos en favoritos, retornando false');
-        return false;
-      }
-      throw error;
+      console.error('❌ Error verificando favorito:', error);
+      return false;
     }
 
-    return !!data;
+    const isFav = count > 0;
+    console.log('✅ isFavorite resultado:', isFav);
+    return isFav;
+
   } catch (error) {
-    console.error('Error verificando favorito:', error);
-    // Para cualquier error, retornar false para evitar que rompa la UI
+    console.error('❌ Error en isFavorite:', error);
     return false;
   }
 };

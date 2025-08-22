@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
-  const { currentUser, isClient, userRole, loading } = useAuth();
+  const { currentUser, isClient, isAdmin, isOwner, userRole, userProfile, loading } = useAuth();
 
   console.log('🛡️ ProtectedRoute verificando acceso:', {
     currentUser: currentUser?.email,
@@ -12,7 +12,11 @@ const ProtectedRoute = ({ children }) => {
     loading,
     hasUser: !!currentUser,
     userEmail: currentUser?.email,
-    userCreatedAt: currentUser?.created_at
+    userCreatedAt: currentUser?.created_at,
+    userProfile: userProfile,
+    isClientResult: isClient(),
+    isClientFunction: typeof isClient,
+    userRoleType: typeof userRole
   });
 
   if (loading) {
@@ -25,16 +29,19 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Verificar si el usuario tiene un rol válido
-  const hasValidRole = userRole && ['cliente', 'admin', 'owner'].includes(userRole);
-  console.log('🔍 ProtectedRoute: Verificación de rol:', {
+  // Verificar si el usuario tiene acceso usando las funciones del contexto
+  const hasAccess = isClient() || isAdmin() || isOwner();
+  console.log('🔍 ProtectedRoute: Verificación de acceso:', {
     userRole,
-    hasValidRole,
+    isClient: isClient(),
+    isAdmin: isAdmin(),
+    isOwner: isOwner(),
+    hasAccess,
     validRoles: ['cliente', 'admin', 'owner']
   });
 
-  if (!hasValidRole) {
-    console.log('⚠️ ProtectedRoute: Usuario sin rol válido, redirigiendo a home');
+  if (!hasAccess) {
+    console.log('⚠️ ProtectedRoute: Usuario sin acceso válido, redirigiendo a home');
     return <Navigate to="/" replace />;
   }
 

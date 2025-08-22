@@ -6,268 +6,353 @@ import toast from 'react-hot-toast';
 const AuthContext = createContext();
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser usado dentro de AuthProvider');
+  }
+  return context;
 }
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState('usuario');
+  // ==================== ESTADO ====================
+  const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Registro de usuario
-  async function signup(email, password, displayName) {
+  // ==================== FUNCIONES INTERNAS ====================
+  
+// Obtener perfil usando authService (unificado)
+const getUserProfile = async (userId) => {
+  try {
+    console.log('🔍 [AuthContext] Delegando a authService.getUserProfile:', userId);
+    
+    if (!userId) {
+      console.error('❌ [AuthContext] No userId provided');
+      return null;
+    }
+
+    // Usar el authService en lugar de llamar directamente a Supabase
+    const profile = await authService.getUserProfile(userId);
+    
+    console.log('✅ [AuthContext] Perfil obtenido de authService:', profile);
+    
+    if (profile) {
+      setUserProfile(profile);
+      return profile;
+    }
+    
+    console.warn('⚠️ [AuthContext] AuthService no retornó perfil');
+    return null;
+
+  } catch (error) {
+    console.error('❌ [AuthContext] Error usando authService:', error);
+    return null;
+  }
+};
+
+  // Test de conexión a Supabase
+  const testSupabaseConnection = async () => {
     try {
-      const result = await authService.signUp(email, password, displayName);
+      console.log('🧪 [TEST] Iniciando test de conexión...');
       
+      // Test 1: Consulta simple sin filtros
+      const { data: testData, error: testError } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      console.log('🧪 [TEST] Test básico:', { testData, testError });
+      
+      // Test 2: Consulta de todos los perfiles
+      const { data: allProfiles, error: allError } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      console.log('🧪 [TEST] Todos los perfiles:', { 
+        count: allProfiles?.length, 
+        profiles: allProfiles, 
+        error: allError 
+      });
+      
+      // Test 3: Consulta específica por email
+      const { data: specificProfile, error: specificError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', 'oterov101@gmail.com');
+      
+      console.log('🧪 [TEST] Tu perfil específico:', { 
+        specificProfile, 
+        specificError 
+      });
+      
+      return {
+        basicTest: { data: testData, error: testError },
+        allProfiles: { data: allProfiles, error: allError },
+        specificProfile: { data: specificProfile, error: specificError }
+      };
+      
+    } catch (error) {
+      console.error('🧪 [TEST] Error en test:', error);
+      return { error };
+    }
+  };
+
+  // Obtener mensaje de error en español
+  const getErrorMessage = (errorMessage) => {
+    const errorMessages = {
+      'Invalid login credentials': 'Credenciales inválidas',
+      'Email not confirmed': 'Email no confirmado',
+      'User already registered': 'El usuario ya está registrado',
+      'Weak password': 'La contraseña es muy débil',
+      'Invalid email': 'Email inválido',
+      'Usuario no encontrado': 'No existe una cuenta con este email',
+      'Contraseña incorrecta': 'Contraseña incorrecta',
+      'El usuario ya existe': 'Este email ya está registrado'
+    };
+    return errorMessages[errorMessage] || errorMessage || 'Error desconocido';
+  };
+
+  // ==================== FUNCIONES DE AUTENTICACIÓN ====================
+
+  const signup = async (email, password, displayName) => {
+    try {
+      console.log('📝 [signup] Registrando usuario:', email);
+      const result = await authService.signUp(email, password, displayName);
       toast.success('Cuenta creada exitosamente. Revisa tu email para confirmar.');
       return result;
     } catch (error) {
-      console.error('Error en registro:', error);
+      console.error('❌ [signup] Error:', error);
       toast.error(getErrorMessage(error.message));
       throw error;
     }
-  }
+  };
 
-  // Login
-  async function login(email, password) {
+  const login = async (email, password) => {
     try {
+      console.log('🔐 [login] Iniciando sesión:', email);
       const result = await authService.signIn(email, password);
-      
       toast.success('Inicio de sesión exitoso');
       return result;
     } catch (error) {
-      console.error('Error en login:', error);
+      console.error('❌ [login] Error:', error);
       toast.error(getErrorMessage(error.message));
       throw error;
     }
-  }
+  };
 
-  // Logout
-  async function logout() {
-    if (isLoggingOut) {
-      console.log('🔄 Logout ya en progreso, ignorando...');
+  const logout = async () => {
+    try {
+      console.log('🚪 [logout] Cerrando sesión...');
+      await authService.signOut();
+      setUser(null);
+      setUserProfile(null);
+      toast.success('Sesión cerrada');
+    } catch (error) {
+      console.error('❌ [logout] Error:', error);
+      toast.error('Error al cerrar sesión');
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email) => {
+    try {
+      console.log('📧 [resetPassword] Enviando reset para:', email);
+      await authService.resetPassword(email);
+      toast.success('Email de recuperación enviado');
+    } catch (error) {
+      console.error('❌ [resetPassword] Error:', error);
+      toast.error(getErrorMessage(error.message));
+      throw error;
+    }
+  };
+
+  // ==================== FUNCIONES DE ROLES ====================
+
+  const isAuthenticated = () => {
+    return !!user;
+  };
+
+  const isAdmin = () => {
+    const result = userProfile?.role === 'admin' || userProfile?.role === 'owner';
+    console.log('🔍 [isAdmin] Check:', {
+      userEmail: user?.email,
+      userRole: userProfile?.role,
+      result
+    });
+    return result;
+  };
+
+  const isOwner = () => {
+    const result = userProfile?.role === 'owner';
+    console.log('🔍 [isOwner] Check:', {
+      userEmail: user?.email,
+      userRole: userProfile?.role,
+      result
+    });
+    return result;
+  };
+
+  const isClient = () => {
+    const result = !!userProfile && ['cliente', 'admin', 'owner'].includes(userProfile.role);
+    console.log('🔍 [isClient] Check:', {
+      userEmail: user?.email,
+      userRole: userProfile?.role,
+      result
+    });
+    return result;
+  };
+
+  const hasRole = (role) => {
+    const result = userProfile?.role === role;
+    console.log('🔍 [hasRole] Check:', {
+      requestedRole: role,
+      userRole: userProfile?.role,
+      result
+    });
+    return result;
+  };
+
+  // ==================== FUNCIONES UTILITARIAS ====================
+
+  const refreshUserProfile = async () => {
+    if (!user?.id) {
+      console.log('🔄 [refreshUserProfile] No hay usuario para refrescar');
       return;
     }
 
     try {
-      setIsLoggingOut(true);
-      console.log('🚪 AuthContext: Iniciando logout...');
-      
-      await authService.signOut();
-      
-      console.log('✅ AuthContext: Logout exitoso');
-      toast.success('Sesión cerrada');
-      
+      console.log('🔄 [refreshUserProfile] Refrescando para:', user.email);
+      const profile = await getUserProfile(user.id);
+      console.log('✅ [refreshUserProfile] Completado:', profile ? 'Éxito' : 'Sin datos');
+      return profile;
     } catch (error) {
-      console.error('❌ Error en logout:', error);
-      toast.error('Error al cerrar sesión');
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }
-
-  // Recuperar contraseña
-  async function resetPassword(email) {
-    try {
-      await authService.resetPassword(email);
-      toast.success('Email de recuperación enviado');
-    } catch (error) {
-      console.error('Error en reset password:', error);
-      toast.error(getErrorMessage(error.message));
+      console.error('❌ [refreshUserProfile] Error:', error);
       throw error;
     }
-  }
+  };
 
-  // Verificar si es owner (dueño) - simplificado
-  async function isOwner() {
-    if (!currentUser) {
-      console.log('🔍 isOwner: No hay usuario autenticado');
-      return false;
-    }
+  // ==================== EFFECTS ====================
 
-    // Forzar owner para tu email específico
-    if (currentUser.email === 'oterov101@gmail.com') {
-      console.log('👑 OWNER FORZADO en isOwner() para oterov101@gmail.com');
-      return true;
-    }
+// Effect principal para inicializar autenticación
+useEffect(() => {
+  let mounted = true;
+  let isInitialized = false; // ⭐ NUEVA BANDERA
 
-    // Para otros usuarios, verificar desde userRole
-    const isOwnerResult = userRole === 'owner';
-    console.log('🔍 Verificación owner desde userRole:', {
-      email: currentUser.email,
-      userRole,
-      isOwner: isOwnerResult
-    });
+  const initializeAuth = async () => {
+    try {
+      console.log('🔄 [AuthContext] Inicializando...');
 
-    return isOwnerResult;
-  }
+      // Obtener sesión actual
+      const session = await authService.getSession();
+      console.log('📋 [AuthContext] Sesión:', session?.user?.email || 'Sin sesión');
 
-  // Verificar si es admin
-  function isAdmin() {
-    console.log('🔍 Verificando rol admin:', { 
-      userRole, 
-      currentUser: currentUser?.email,
-      result: userRole === 'admin' || userRole === 'owner'
-    });
-    return userRole === 'admin' || userRole === 'owner';
-  }
+      if (session?.user && mounted) {
+        console.log('👤 [AuthContext] Usuario encontrado:', session.user.email);
+        setUser(session.user);
 
-  // Verificar si es cliente
-  function isClient() {
-    return userRole === 'cliente' || userRole === 'admin' || userRole === 'owner';
-  }
-
-  // Obtener mensaje de error en español
-  function getErrorMessage(errorMessage) {
-    const errorMessages = {
-      'Usuario no encontrado': 'No existe una cuenta con este email',
-      'Contraseña incorrecta': 'Contraseña incorrecta',
-      'El usuario ya existe': 'Este email ya está registrado',
-      'Email inválido': 'Email inválido',
-      'Demasiados intentos': 'Demasiados intentos. Intenta más tarde',
-      'Cuenta deshabilitada': 'Esta cuenta ha sido deshabilitada',
-      'Operación no permitida': 'Operación no permitida',
-      'Credenciales inválidas': 'Credenciales inválidas'
-    };
-    return errorMessages[errorMessage] || errorMessage || 'Error desconocido';
-  }
-
-  // Verificar sesión y escuchar cambios de autenticación
-  useEffect(() => {
-    // Obtener sesión inicial
-    const getInitialSession = async () => {
-      try {
-        const session = await authService.getSession();
-        
-        if (session?.user) {
-          setCurrentUser(session.user);
-          console.log('👤 Usuario autenticado:', session.user.email);
-          
-          // Para el owner, usar el nombre real desde los metadatos
-          if (session.user.email === 'oterov101@gmail.com') {
-            setUserRole('owner');
-            setUserProfile({
-              display_name: session.user.user_metadata?.display_name || 'Valentin Otero',
-              email: session.user.email,
-              role: 'owner'
-            });
-            console.log('👑 OWNER configurado para oterov101@gmail.com');
-            return;
-          }
-          
-          // Obtener perfil desde la base de datos para otros usuarios
-          try {
-            const profile = await authService.getUserProfile(session.user.id);
-            console.log('✅ Perfil obtenido desde DB:', profile);
-            
-            // Asegurar que siempre haya un rol válido
-            const validRole = profile?.role && ['cliente', 'admin', 'owner'].includes(profile.role) 
-              ? profile.role 
-              : 'cliente';
-            
-            setUserRole(validRole);
-            setUserProfile(profile);
-            console.log('🎯 Rol establecido:', validRole);
-          } catch (profileError) {
-            console.warn('⚠️ Error obteniendo perfil, usando perfil básico por defecto:', profileError);
-            setUserRole('cliente');
-            setUserProfile({
-              display_name: session.user.user_metadata?.display_name || 'Usuario',
-              email: session.user.email,
-              role: 'cliente'
-            });
-            console.log('🔄 Rol por defecto establecido: cliente');
-          }
+        // Obtener perfil usando authService
+        const profile = await getUserProfile(session.user.id);
+        if (profile) {
+          console.log('✅ [AuthContext] Perfil cargado:', profile.role);
         } else {
-          console.log('ℹ️ No hay sesión activa');
+          console.warn('⚠️ [AuthContext] No se pudo cargar perfil');
         }
-      } catch (error) {
-        console.error('❌ Error obteniendo sesión:', error);
-      } finally {
-        console.log('✅ Carga de autenticación completada');
+      } else {
+        console.log('ℹ️ [AuthContext] No hay sesión activa');
+      }
+    } catch (error) {
+      console.error('❌ [AuthContext] Error inicializando:', error);
+    } finally {
+      if (mounted) {
+        isInitialized = true; // ⭐ MARCAR COMO INICIALIZADO
+        console.log('✅ [AuthContext] Inicialización completada');
         setLoading(false);
       }
-    };
+    }
+  };
 
-    getInitialSession();
+  initializeAuth();
 
-    // Timeout de seguridad
-    const timeoutId = setTimeout(() => {
-      console.log('⏰ Timeout de autenticación - forzando carga');
-      setLoading(false);
-    }, 1500);
+  // Escuchar cambios de autenticación
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      console.log('🔄 [AuthStateChange]:', event, session?.user?.email || 'Sin usuario');
 
-    // Escuchar cambios de autenticación
-    const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
-      console.log('🔄 AuthStateChange:', event, session?.user?.email);
-      
+      if (!mounted || !isInitialized) return; // ⭐ EVITAR EJECUCIÓN ANTES DE INICIALIZAR
+
       if (event === 'SIGNED_IN' && session?.user) {
-        setCurrentUser(session.user);
-        
-        // Para el owner, usar el nombre real desde los metadatos
-        if (session.user.email === 'oterov101@gmail.com') {
-          setUserRole('owner');
-          setUserProfile({
-            display_name: session.user.user_metadata?.display_name || 'Valentin Otero',
-            email: session.user.email,
-            role: 'owner'
-          });
-          console.log('👑 OWNER configurado en onChange para oterov101@gmail.com');
-          return;
-        }
-        
-        // Obtener perfil desde la base de datos para otros usuarios
-        try {
-          const profile = await authService.getUserProfile(session.user.id);
-          console.log('✅ Perfil obtenido desde DB en onChange:', profile);
+        // ⭐ SOLO SI ES DIFERENTE AL USUARIO ACTUAL
+        if (user?.id !== session.user.id) {
+          console.log('🔐 [AuthStateChange] Nuevo login:', session.user.email);
+          setUser(session.user);
           
-          // Asegurar que siempre haya un rol válido
-          const validRole = profile?.role && ['cliente', 'admin', 'owner'].includes(profile.role) 
-            ? profile.role 
-            : 'cliente';
-          
-          setUserRole(validRole);
-          setUserProfile(profile);
-          console.log('🎯 Rol establecido en onChange:', validRole);
-        } catch (profileError) {
-          console.warn('⚠️ Error obteniendo perfil en onChange, usando perfil básico por defecto:', profileError);
-          setUserRole('cliente');
-          setUserProfile({
-            display_name: session.user.user_metadata?.display_name || 'Usuario',
-            email: session.user.email,
-            role: 'cliente'
-          });
-          console.log('🔄 Rol por defecto establecido en onChange: cliente');
+          const profile = await getUserProfile(session.user.id);
+          if (profile) {
+            console.log('✅ [AuthStateChange] Perfil cargado:', profile.role);
+          }
         }
       } else if (event === 'SIGNED_OUT') {
-        console.log('🔓 SIGNED_OUT detectado, limpiando estado...');
-        setCurrentUser(null);
-        setUserRole('usuario');
+        console.log('🚪 [AuthStateChange] Logout');
+        setUser(null);
         setUserProfile(null);
-        setIsLoggingOut(false);
       }
-    });
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeoutId);
-    };
-  }, []);
+      if (mounted) {
+        setLoading(false);
+      }
+    }
+  );
 
+  return () => {
+    mounted = false;
+    subscription?.unsubscribe();
+  };
+}, []); // ⭐ ASEGÚRATE DE QUE LAS DEPENDENCIAS ESTÉN VACÍAS
+  // Effect de debug para mostrar estado actual
+  useEffect(() => {
+    if (!loading) {
+      console.log('🎭 [AuthContext] Estado actual:', {
+        user: user?.email || 'Sin usuario',
+        profile: userProfile ? `${userProfile.role} (${userProfile.email})` : 'Sin perfil',
+        isAuthenticated: isAuthenticated(),
+        isAdmin: isAdmin(),
+        isOwner: isOwner(),
+        isClient: isClient()
+      });
+    }
+  }, [user, userProfile, loading]);
+
+  // ==================== CONTEXT VALUE ====================
   const value = {
-    currentUser,
-    userRole,
+    // Estado principal
+    user,
     userProfile,
+    loading,
+
+    // Funciones de autenticación
     signup,
     login,
     logout,
     resetPassword,
-    isOwner,
+
+    // Funciones de roles
+    isAuthenticated,
     isAdmin,
+    isOwner,
     isClient,
-    loading
+    hasRole,
+
+    // Utilidades
+    refreshUserProfile,
+    testSupabaseConnection,
+
+    // Datos derivados
+    userRole: userProfile?.role || null,
+    userName: userProfile?.display_name || user?.email?.split('@')[0] || '',
+    userEmail: user?.email || '',
+
+    // Compatibilidad con código legacy
+    currentUser: user
   };
 
   return (

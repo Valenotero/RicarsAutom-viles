@@ -7,6 +7,7 @@ import CatalogFilters from '../components/catalog/CatalogFilters';
 import { getVehicles } from '../services/vehicleService';
 import { testConnection } from '../supabase/config';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import toast from 'react-hot-toast';
 
 const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,7 +33,8 @@ const Catalog = () => {
 
   // Aplicar filtros y ordenamiento
   const applyFiltersAndSort = (vehicles, filters, sortBy) => {
-    let filtered = [...vehicles];
+    const list = Array.isArray(vehicles) ? vehicles : [];
+    let filtered = [...list];
 
     // Aplicar filtros
     if (filters.brand) {
@@ -117,6 +119,7 @@ const Catalog = () => {
         setVehicles(filteredAndSorted);
       } catch (error) {
         console.error('❌ Error cargando vehículos:', error);
+        toast.error('Hubo un problema al cargar los vehículos');
         // No mostrar datos mock - la base debe estar vacía hasta que el admin agregue vehículos
         setVehicles([]);
       } finally {
