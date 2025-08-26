@@ -22,6 +22,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import OwnerRoute from './components/auth/OwnerRoute';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import { Analytics } from "@vercel/analytics/react"
 
 function App() {
   const { loading } = useAuth();

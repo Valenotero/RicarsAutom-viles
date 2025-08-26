@@ -10,7 +10,8 @@ import {
   Share2, 
   Heart,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Eye
 } from 'lucide-react';
 import { FacebookIcon, WhatsAppIcon, MercadoLibreIcon } from '../components/icons/SocialIcons';
 import { motion } from 'framer-motion';
@@ -28,24 +29,17 @@ const VehicleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [viewTracked, setViewTracked] = useState(false);
 
   useEffect(() => {
     const loadVehicle = async () => {
       try {
         setLoading(true);
+        console.log('🔄 Cargando vehículo:', id);
+        
         const vehicleData = await getVehicleById(id);
+        console.log('✅ Vehículo cargado:', vehicleData);
         setVehicle(vehicleData);
-        
-        // Agregar a vistos recientemente
-        await addToRecentlyViewed(id);
-        
-        // TODO: Implementar incremento de vistas cuando se cree la función en Supabase
-        // try {
-        //   const { supabase } = await import('../supabase/config');
-        //   await supabase.rpc('increment_vehicle_views', { vehicle_uuid: id });
-        // } catch (error) {
-        //   console.error('Error incrementando vistas:', error);
-        // }
         
         // Cargar vehículos similares
         const similar = await getSimilarVehicles(vehicleData);
@@ -57,15 +51,61 @@ const VehicleDetail = () => {
           setIsFavorited(favorited);
         }
       } catch (error) {
-        console.error('Error cargando vehículo:', error);
+        console.error('❌ Error cargando vehículo:', error);
         toast.error('Error al cargar el vehículo');
       } finally {
         setLoading(false);
       }
     };
 
-    loadVehicle();
+    if (id) {
+      loadVehicle();
+    }
   }, [id, currentUser]);
+
+  // Efecto separado para trackear la vista
+  useEffect(() => {
+    const trackView = async () => {
+      if (!id || !vehicle || viewTracked) return;
+
+      try {
+        console.log('👁️ Registrando vista para vehículo:', id);
+        
+        const result = await addToRecentlyViewed(id);
+        console.log('📊 Resultado del tracking:', result);
+        
+        if (result.success) {
+          setViewTracked(true);
+          console.log('✅ Vista registrada exitosamente');
+        } else {
+          console.warn('⚠️ No se pudo registrar la vista:', result.error);
+        }
+
+        // Intentar incrementar contador de vistas si existe la función RPC
+        try {
+          const { supabase } = await import('../supabase/config');
+          const { error: rpcError } = await supabase.rpc('increment_vehicle_views', { 
+            vehicle_uuid: id 
+          });
+          
+          if (rpcError) {
+            console.warn('⚠️ RPC increment_vehicle_views no disponible:', rpcError);
+          } else {
+            console.log('📈 Contador de vistas incrementado');
+          }
+        } catch (error) {
+          console.warn('⚠️ Error incrementando contador:', error);
+        }
+
+      } catch (error) {
+        console.error('❌ Error registrando vista:', error);
+      }
+    };
+
+    // Delay para asegurar que el vehículo esté cargado
+    const timer = setTimeout(trackView, 1000);
+    return () => clearTimeout(timer);
+  }, [id, vehicle, viewTracked]);
 
   const formatPrice = (price, currency = 'USD') => {
     return new Intl.NumberFormat('es-AR', {
@@ -122,6 +162,19 @@ const VehicleDetail = () => {
     } catch (error) {
       console.error('Error manejando favorito:', error);
       toast.error('Error al actualizar favoritos');
+    }
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `${vehicle.brand} ${vehicle.model} ${vehicle.year}`,
+        text: `Mira este ${vehicle.brand} ${vehicle.model} en Ricars Automóviles`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Enlace copiado al portapapeles');
     }
   };
 
@@ -195,74 +248,88 @@ const VehicleDetail = () => {
           <div className="space-y-4">
             <div className="relative">
               <img
-                src={vehicle.images[currentImageIndex] || '/placeholder-car.jpg'}
+                src={vehicle.images?.[currentImageIndex] || '/placeholder-car.jpg'}
                 alt={`${vehicle.brand} ${vehicle.model}`}
                 className="w-full h-96 object-cover rounded-lg"
               />
               
               {/* Controles de galería */}
-              <button
-                onClick={prevImage}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button
-                onClick={nextImage}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-
-              {/* Indicadores */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                {vehicle.images.map((_, index) => (
+              {vehicle.images && vehicle.images.length > 1 && (
+                <>
                   <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                      index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
-                    }`}
-                  />
-                ))}
-              </div>
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+
+                  {/* Indicadores */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                    {vehicle.images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                          index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
 
               {/* Badges */}
               <div className="absolute top-4 left-4 flex space-x-2">
-                {vehicle.featured && (
+                {vehicle.is_featured && (
                   <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
                     <Star className="w-4 h-4 mr-1" />
                     Destacado
                   </span>
                 )}
-                {vehicle.promotion && (
+                {(vehicle.is_promotion || vehicle.promotion_price) && (
                   <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
                     Oferta
                   </span>
                 )}
               </div>
+
+              {/* Mostrar vistas si está disponible */}
+              {vehicle.views && (
+                <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm flex items-center">
+                  <Eye className="w-4 h-4 mr-1" />
+                  {vehicle.views} vistas
+                </div>
+              )}
             </div>
 
             {/* Miniaturas */}
-            <div className="grid grid-cols-5 gap-2">
-              {vehicle.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentImageIndex(index)}
-                  className={`w-full h-20 object-cover rounded-lg border-2 transition-all duration-200 ${
-                    index === currentImageIndex 
-                      ? 'border-primary-600' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt={`${vehicle.brand} ${vehicle.model} - Imagen ${index + 1}`}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </button>
-              ))}
-            </div>
+            {vehicle.images && vehicle.images.length > 1 && (
+              <div className="grid grid-cols-5 gap-2">
+                {vehicle.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-full h-20 rounded-lg border-2 transition-all duration-200 overflow-hidden ${
+                      index === currentImageIndex 
+                        ? 'border-primary-600' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`${vehicle.brand} ${vehicle.model} - Imagen ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Información del vehículo */}
@@ -272,15 +339,23 @@ const VehicleDetail = () => {
                 {vehicle.brand} {vehicle.model}
               </h1>
               <p className="text-xl text-gray-600 mb-4">
-                {vehicle.version}
+                {vehicle.version || `${vehicle.year} - ${vehicle.condition === 'new' ? 'Nuevo' : 'Usado'}`}
               </p>
               
               <div className="flex items-center justify-between">
                 <div className="text-3xl font-bold text-primary-600">
-                  {formatPrice(vehicle.price)}
+                  {vehicle.promotion_price ? 
+                    formatPrice(vehicle.promotion_price) : 
+                    formatPrice(vehicle.price)
+                  }
+                  {vehicle.promotion_price && (
+                    <span className="text-lg text-gray-400 line-through ml-3">
+                      {formatPrice(vehicle.price)}
+                    </span>
+                  )}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {formatPriceARS(vehicle.price)}
+                  {formatPriceARS(vehicle.promotion_price || vehicle.price)}
                 </div>
               </div>
             </div>
@@ -293,11 +368,11 @@ const VehicleDetail = () => {
               </div>
               <div className="flex items-center text-gray-600">
                 <Gauge className="w-5 h-5 mr-2" />
-                <span>{vehicle.kilometers.toLocaleString()} km</span>
+                <span>{vehicle.kilometers?.toLocaleString() || vehicle.mileage?.toLocaleString()} km</span>
               </div>
               <div className="flex items-center text-gray-600">
                 <MapPin className="w-5 h-5 mr-2" />
-                <span>{vehicle.location}</span>
+                <span>{vehicle.location || 'Buenos Aires'}</span>
               </div>
               <div className="flex items-center text-gray-600 capitalize">
                 <span>{vehicle.transmission}</span>
@@ -325,7 +400,10 @@ const VehicleDetail = () => {
                 <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
               </button>
               
-              <button className="p-3 rounded-lg border border-gray-300 text-gray-600 hover:border-gray-400 transition-colors duration-200">
+              <button 
+                onClick={handleShare}
+                className="p-3 rounded-lg border border-gray-300 text-gray-600 hover:border-gray-400 transition-colors duration-200"
+              >
                 <Share2 className="w-5 h-5" />
               </button>
             </div>
@@ -367,17 +445,19 @@ const VehicleDetail = () => {
                     <span className="text-gray-600">Modelo:</span>
                     <span className="font-medium">{vehicle.model}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Versión:</span>
-                    <span className="font-medium">{vehicle.version}</span>
-                  </div>
+                  {vehicle.version && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Versión:</span>
+                      <span className="font-medium">{vehicle.version}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Año:</span>
                     <span className="font-medium">{vehicle.year}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Kilometraje:</span>
-                    <span className="font-medium">{vehicle.kilometers.toLocaleString()} km</span>
+                    <span className="font-medium">{vehicle.kilometers?.toLocaleString() || vehicle.mileage?.toLocaleString()} km</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Condición:</span>
@@ -395,7 +475,7 @@ const VehicleDetail = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Combustible:</span>
-                    <span className="font-medium capitalize">{vehicle.fuelType}</span>
+                    <span className="font-medium capitalize">{vehicle.fuel_type || vehicle.fuelType}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Color:</span>
@@ -423,12 +503,16 @@ const VehicleDetail = () => {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-3">Características</h3>
                 <div className="space-y-2">
-                  {vehicle.features?.map((feature, index) => (
-                    <div key={index} className="flex items-center text-sm">
-                      <div className="w-2 h-2 bg-primary-600 rounded-full mr-3"></div>
-                      <span className="text-gray-700">{feature}</span>
-                    </div>
-                  ))}
+                  {vehicle.features?.length > 0 ? (
+                    vehicle.features.map((feature, index) => (
+                      <div key={index} className="flex items-center text-sm">
+                        <div className="w-2 h-2 bg-primary-600 rounded-full mr-3"></div>
+                        <span className="text-gray-700">{feature}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay características adicionales registradas</p>
+                  )}
                 </div>
               </div>
             </div>

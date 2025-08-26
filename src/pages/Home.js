@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import HeroSearch from '../components/home/HeroSearch';
 import VehicleCard from '../components/vehicles/VehicleCard';
 import CategoryFilter from '../components/home/CategoryFilter';
-import { vehicleService } from '../services/supabaseService'; // ← CAMBIO PRINCIPAL
-import { supabase } from '../supabase/config'; // ← PARA TEST TEMPORAL
+import { vehicleService } from '../services/supabaseService';
+import { supabase } from '../supabase/config';
 import toast from 'react-hot-toast';
 
 const Home = () => {
@@ -14,11 +14,10 @@ const Home = () => {
   const [recentVehicles, setRecentVehicles] = useState([]);
   const [promotionVehicles, setPromotionVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [connectionTest, setConnectionTest] = useState(null); // ← TEST TEMPORAL
+  const [connectionTest, setConnectionTest] = useState(null);
   const carouselRef = useRef(null);
 
   useEffect(() => {
-    // Test temporal de conexión
     const testConnection = async () => {
       try {
         console.log('🧪 Test: Probando conexión a Supabase...');
@@ -34,26 +33,64 @@ const Home = () => {
     const loadVehicles = async () => {
       try {
         console.log('🔄 Cargando vehículos desde Supabase...');
-        const vehicles = await vehicleService.getVehicles(); // ← CAMBIO PRINCIPAL
+        const vehicles = await vehicleService.getVehicles();
         console.log('✅ Vehículos cargados:', vehicles);
         
-        const featured = vehicles.filter(v => v.is_featured).slice(0, 6);
-        const recent = vehicles.slice(0, 8);
-        const promotion = vehicles.filter(v => v.is_promotion || v.has_promotion || v.promotion_price || v.discount).slice(0, 10);
+        // Debug de precios
+        if (vehicles && vehicles.length > 0) {
+          console.log('💰 Análisis de precios de vehículos:');
+          vehicles.slice(0, 10).forEach((v, i) => {
+            const price = v.promotion_price || v.price || 0;
+            console.log(`  ${i+1}. ${v.brand} ${v.model} (${v.year}): $${price.toLocaleString()}`);
+          });
+        }
         
-        console.log('📊 Categorizados:', { 
+        // Categorizar vehículos con mejor lógica
+        const featured = vehicles
+          .filter(v => v.is_featured || v.featured || false)
+          .slice(0, 6);
+        
+        const recent = vehicles
+          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+          .slice(0, 8);
+        
+        // Mejorar detección de promociones
+        const promotion = vehicles
+          .filter(v => 
+            v.is_promotion || 
+            v.has_promotion || 
+            v.promotion_price || 
+            v.discount ||
+            v.special_offer ||
+            (v.price && v.promotion_price && v.price > v.promotion_price)
+          )
+          .slice(0, 10);
+        
+        console.log('📊 Vehículos categorizados:', { 
+          total: vehicles.length,
           featured: featured.length, 
           recent: recent.length, 
-          promotion: promotion.length,
-          total: vehicles.length 
+          promotion: promotion.length
         });
         
-        setFeaturedVehicles(featured);
+        // Si no hay featured, usar los primeros 6
+        if (featured.length === 0 && vehicles.length > 0) {
+          console.log('ℹ️ No hay vehículos destacados, usando los primeros 6');
+          setFeaturedVehicles(vehicles.slice(0, 6));
+        } else {
+          setFeaturedVehicles(featured);
+        }
+        
         setRecentVehicles(recent);
         setPromotionVehicles(promotion);
+        
       } catch (error) {
         console.error('❌ Error cargando vehículos:', error);
         toast.error('Error al cargar vehículos: ' + error.message);
+        // Establecer arrays vacíos en caso de error
+        setFeaturedVehicles([]);
+        setRecentVehicles([]);
+        setPromotionVehicles([]);
       } finally {
         setLoading(false);
       }
@@ -83,7 +120,7 @@ const Home = () => {
   const canScrollRight = () => {
     if (!carouselRef.current) return false;
     const maxScroll = carouselRef.current.scrollWidth - carouselRef.current.clientWidth;
-    return carouselRef.current.scrollLeft < maxScroll;
+    return carouselRef.current.scrollLeft < maxScroll - 10; // Buffer de 10px
   };
 
   const categories = [
@@ -98,32 +135,32 @@ const Home = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Panel de Debug Temporal - ELIMINAR DESPUÉS */}
+      {/* Panel de Debug Temporal */}
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 m-4">
-        <h3 className="font-bold text-lg mb-2">🔍 Debug - Conexión Supabase</h3>
+        <h3 className="font-bold text-lg mb-2">Debug - Conexión Supabase</h3>
         
         <div className="mb-2">
           <strong>Conexión:</strong> 
           {connectionTest ? (
             connectionTest.success ? (
-              <span className="text-green-600 ml-2">✅ Conectado</span>
+              <span className="text-green-600 ml-2">Conectado</span>
             ) : (
-              <span className="text-red-600 ml-2">❌ Error: {connectionTest.error?.message}</span>
+              <span className="text-red-600 ml-2">Error: {connectionTest.error?.message}</span>
             )
           ) : (
-            <span className="text-yellow-600 ml-2">⏳ Probando...</span>
+            <span className="text-yellow-600 ml-2">Probando...</span>
           )}
         </div>
 
         <div className="mb-2">
           <strong>Vehículos cargados:</strong>
           <span className="ml-2">
-            {loading ? '⏳ Cargando...' : `✅ Featured: ${featuredVehicles.length}, Recent: ${recentVehicles.length}, Promotion: ${promotionVehicles.length}`}
+            {loading ? 'Cargando...' : `Featured: ${featuredVehicles.length}, Recent: ${recentVehicles.length}, Promotion: ${promotionVehicles.length}`}
           </span>
         </div>
 
         <div className="text-sm text-gray-600">
-          Abrí la consola del navegador (F12) para ver los detalles completos
+          Abrir consola del navegador (F12) para ver detalles completos
         </div>
       </div>
 
@@ -144,7 +181,6 @@ const Home = () => {
               La mejor selección de vehículos nuevos y usados con financiación a tu medida
             </p>
             
-            {/* Hero Search */}
             <HeroSearch />
           </motion.div>
         </div>
@@ -237,10 +273,10 @@ const Home = () => {
               className="text-center mb-12"
             >
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                🎯 Ofertas Especiales
+                Ofertas Especiales
               </h2>
               <p className="text-lg text-gray-600">
-                ¡No te pierdas estas increíbles ofertas por tiempo limitado!
+                No te pierdas estas increíbles ofertas por tiempo limitado
               </p>
             </motion.div>
 
@@ -266,7 +302,7 @@ const Home = () => {
                 </button>
               )}
 
-              {/* Carrusel horizontal con scroll */}
+              {/* Carrusel horizontal */}
               <div 
                 ref={carouselRef}
                 className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide scroll-smooth"
@@ -289,9 +325,9 @@ const Home = () => {
                           className="w-full h-48 object-cover"
                         />
                         <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                          🔥 OFERTA
+                          OFERTA
                         </div>
-                        {vehicle.promotion_price && (
+                        {vehicle.promotion_price && vehicle.price && vehicle.price > vehicle.promotion_price && (
                           <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                             -${(vehicle.price - vehicle.promotion_price).toLocaleString()}
                           </div>
@@ -314,9 +350,9 @@ const Home = () => {
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-2">
                             <span className="text-2xl font-bold text-red-600">
-                              ${vehicle.promotion_price ? vehicle.promotion_price.toLocaleString() : vehicle.price.toLocaleString()}
+                              ${(vehicle.promotion_price || vehicle.price || 0).toLocaleString()}
                             </span>
-                            {vehicle.promotion_price && (
+                            {vehicle.promotion_price && vehicle.price && vehicle.price > vehicle.promotion_price && (
                               <span className="text-lg text-gray-400 line-through">
                                 ${vehicle.price.toLocaleString()}
                               </span>
@@ -328,7 +364,7 @@ const Home = () => {
                         </div>
                         
                         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                          <span>{vehicle.kilometers?.toLocaleString() || vehicle.mileage?.toLocaleString()} km</span>
+                          <span>{(vehicle.kilometers || vehicle.mileage || 0).toLocaleString()} km</span>
                           <span>{vehicle.fuel_type}</span>
                           <span>{vehicle.transmission}</span>
                         </div>

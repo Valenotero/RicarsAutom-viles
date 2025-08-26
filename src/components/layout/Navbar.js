@@ -1,252 +1,189 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Menu, X, User, LogOut, Settings, Crown, Users } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, Heart, Phone, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { currentUser, logout, isAdmin, isOwner, isClient, refreshUserProfile, userRole, userProfile, loading } = useAuth();
+  const { currentUser, userProfile, logout, isAdmin, isOwner, isClient } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const userMenuRef = useRef(null);
 
-  // Memoizar el estado de todos los roles para evitar recálculos innecesarios
-  const userRoles = useMemo(() => {
-    const ownerResult = isOwner();
-    const adminResult = isAdmin();
-    const clientResult = isClient();
-    
-    console.log('🔍 Navbar: Verificación de todos los roles:', {
-      owner: ownerResult,
-      admin: adminResult,
-      client: clientResult,
-      currentUser: currentUser?.email,
-      userRole: userRole,
-      userProfile: userProfile,
-      hasCurrentUser: !!currentUser,
-      loading
-    });
-    
-    return {
-      isOwner: ownerResult,
-      isAdmin: adminResult,
-      isClient: clientResult
+  // Detectar scroll para cambiar estilo del navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
     };
-  }, [isOwner, isAdmin, isClient, currentUser, userRole, userProfile, loading]);
-
-  const navigation = [
-    { name: 'Inicio', href: '/' },
-    { name: 'Catálogo', href: '/catalogo' },
-    { name: 'Galería', href: '/galeria' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'Nosotros', href: '/nosotros' },
-  ];
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = async () => {
     try {
-      console.log('🚪 Navbar: Iniciando logout...', {
-        currentUser: currentUser?.email,
-        userRoles,
-        hasCurrentUser: !!currentUser
-      });
-      setIsOpen(false);
-      setUserMenuOpen(false);
-      
-      // Mostrar feedback visual
-      const logoutButton = document.querySelector('[data-logout-button]');
-      if (logoutButton) {
-        logoutButton.disabled = true;
-        logoutButton.innerHTML = '<div class="animate-spin w-4 h-4 mr-2">⏳</div>Cerrando...';
-      }
-      
       await logout();
-      console.log('✅ Navbar: Logout exitoso');
       navigate('/');
-      
+      setShowUserMenu(false);
     } catch (error) {
-      console.error('❌ Navbar: Error en logout:', error);
-      // Restaurar botón si hay error
-      const logoutButton = document.querySelector('[data-logout-button]');
-      if (logoutButton) {
-        logoutButton.disabled = false;
-        logoutButton.innerHTML = '<LogOut className="w-4 h-4 mr-2" />Cerrar Sesión';
-      }
+      console.error('Error al cerrar sesión:', error);
     }
   };
 
-  // Cerrar menú cuando se hace clic fuera
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setUserMenuOpen(false);
-      }
-    };
+  const isActivePath = (path) => {
+    return location.pathname === path;
+  };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  const navLinks = [
+    { name: 'Inicio', path: '/' },
+    { name: 'Catálogo', path: '/catalogo' },
+    { name: 'Galería', path: '/galeria' },
+    { name: 'Blog', path: '/blog' },
+    { name: 'Nosotros', path: '/nosotros' },
+  ];
+
+  // Componente del logo Ri Cars con imagen real
+  const RiCarsLogo = () => (
+    <Link to="/" className="flex items-center space-x-3 ri-logo">
+      <div className="relative">
+        <img 
+          src="/RiCarsPNG.png" 
+          alt="Ri Cars Logo" 
+          className="h-12 w-auto object-contain filter drop-shadow-md hover:drop-shadow-lg transition-all duration-300"
+        />
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-secondary-400 rounded-full opacity-60 animate-pulse"></div>
+      </div>
+      <div className="flex flex-col">
+        <span className="font-bold text-xl text-ri-gradient leading-tight">
+          Ri Cars
+        </span>
+        <span className="text-xs text-gray-500 leading-tight font-medium">
+          Multimarcas 0KM y Usados
+        </span>
+      </div>
+    </Link>
+  );
 
   return (
     <>
-      {/* 🔍 DEBUG TEMPORAL - ELIMINAR DESPUÉS */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-yellow-50 border-b border-yellow-200 p-2 text-xs font-mono">
-          <strong>🔍 Auth Debug:</strong> 
-          {loading ? ' ⏳ Cargando...' : 
-           ` 👤 Usuario: ${currentUser?.email || 'No user'} | 
-             🎭 Rol: ${userProfile?.role || userRole || 'No role'} | 
-             👑 Admin: ${userRoles.isAdmin ? 'SÍ' : 'NO'} | 
-             👑 Owner: ${userRoles.isOwner ? 'SÍ' : 'NO'} |
-             📊 Profile: ${userProfile ? JSON.stringify(userProfile) : 'No profile'}`
-          }
+      {/* Banner promocional superior */}
+      {location.pathname === '/' && (
+        <div className="fixed top-0 left-0 right-0 z-60 bg-gradient-to-r from-primary-600 via-primary-500 to-secondary-600 text-white text-center py-1.5 text-sm font-medium">
+          Multimarcas 0KM y Usados - Av. Cabrera 3754, Bahía Blanca - Tel: 2914683337
         </div>
       )}
 
-      <nav className="bg-white shadow-lg sticky top-0 z-50">
+      <nav className={`ri-navbar fixed w-full z-50 transition-all duration-300 ${
+        location.pathname === '/' ? 'top-6' : 'top-0'
+      } ${isScrolled ? 'shadow-lg backdrop-blur-lg' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+          <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="flex items-center">
-                <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">R</span>
-                </div>
-                <span className="ml-2 text-xl font-bold text-gray-900">Ricars</span>
-              </Link>
-            </div>
+            <RiCarsLogo />
 
-            {/* Desktop Navigation */}
+            {/* Enlaces de navegación - Desktop */}
             <div className="hidden md:flex items-center space-x-8">
-              {navigation.map((item) => (
+              {navLinks.map((link) => (
                 <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    location.pathname === item.href
-                      ? 'text-primary-600 bg-primary-50'
-                      : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50'
+                  key={link.path}
+                  to={link.path}
+                  className={`relative font-medium transition-all duration-200 hover:text-primary-600 ${
+                    isActivePath(link.path)
+                      ? 'text-primary-600'
+                      : 'text-gray-700 hover:text-primary-600'
                   }`}
                 >
-                  {item.name}
+                  {link.name}
+                  {isActivePath(link.path) && (
+                    <motion.div
+                      layoutId="activeLink"
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-600 to-secondary-500"
+                      initial={false}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
                 </Link>
               ))}
             </div>
 
-            {/* User Menu */}
+            {/* Acciones del usuario - Desktop */}
             <div className="hidden md:flex items-center space-x-4">
-              
-              {/* Botón para refrescar perfil */}
-              {currentUser && (
-                <button
-                  onClick={async () => {
-                    try {
-                      console.log('🔄 Refrescando perfil manualmente...');
-                      await refreshUserProfile();
-                      console.log('✅ Perfil refrescado manualmente');
-                      alert('Perfil refrescado. Revisa la consola y el debug para ver el nuevo rol.');
-                    } catch (error) {
-                      console.error('❌ Error refrescando perfil:', error);
-                      alert('Error refrescando perfil: ' + error.message);
-                    }
-                  }}
-                  className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded hover:bg-green-200 transition-colors"
-                >
-                  🔄 Refrescar
-                </button>
-              )}
-              
               {currentUser ? (
-                <div className="relative" ref={userMenuRef}>
-                  <button 
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors duration-300 focus:outline-none"
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                   >
-                    <User className="w-5 h-5" />
-                    <span className="text-sm font-medium">
-                      {currentUser.displayName || userProfile?.display_name || currentUser.email}
-                    </span>
-                    <span className="text-xs bg-blue-100 text-blue-600 px-1 rounded">
-                      {userProfile?.role || 'sin rol'}
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {userProfile?.name || currentUser.email?.split('@')[0]}
                     </span>
                   </button>
-                  
-                  {/* Dropdown Menu */}
+
                   <AnimatePresence>
-                    {userMenuOpen && (
+                    {showUserMenu && (
                       <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border"
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
                       >
                         <Link
                           to="/perfil"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-300"
+                          className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
                         >
-                          <User className="w-4 h-4 mr-2" />
-                          Mi Perfil
+                          <User className="w-4 h-4" />
+                          <span>Mi Perfil</span>
                         </Link>
                         
                         <Link
                           to="/favoritos"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-300"
+                          className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
                         >
-                          <span className="w-4 h-4 mr-2">❤️</span>
-                          Favoritos
+                          <Heart className="w-4 h-4" />
+                          <span>Favoritos</span>
                         </Link>
 
-                        {userRoles.isOwner && (
-                          <Link
-                            to="/users"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-300 border-t"
-                          >
-                            <Crown className="w-4 h-4 mr-2 text-yellow-500" />
-                            <span className="font-medium">Gestión de Usuarios</span>
-                          </Link>
-                        )}
-                        
-                        {userRoles.isAdmin && (
+                        {(isAdmin() || isOwner()) && (
                           <Link
                             to="/admin"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-300"
+                            className="flex items-center space-x-2 px-4 py-2 text-sm text-primary-600 hover:bg-primary-50"
+                            onClick={() => setShowUserMenu(false)}
                           >
-                            <Settings className="w-4 h-4 mr-2 text-blue-500" />
-                            <span className="font-medium">Panel Admin</span>
+                            <Settings className="w-4 h-4" />
+                            <span>Panel Admin</span>
                           </Link>
                         )}
+
+                        <hr className="my-1" />
                         
                         <button
                           onClick={handleLogout}
-                          data-logout-button
-                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-300 border-t"
+                          className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
                         >
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Cerrar Sesión
+                          <LogOut className="w-4 h-4" />
+                          <span>Cerrar Sesión</span>
                         </button>
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
               ) : (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
                   <Link
                     to="/login"
-                    className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
+                    className="text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200"
                   >
                     Iniciar Sesión
                   </Link>
                   <Link
                     to="/registro"
-                    className="btn-primary"
+                    className="btn-primary text-sm px-4 py-2"
                   >
                     Registrarse
                   </Link>
@@ -254,122 +191,141 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
-              >
-                {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-white border-t border-gray-200"
+            {/* Botón de menú móvil */}
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
-              <div className="px-2 pt-2 pb-3 space-y-1">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-                      location.pathname === item.href
-                        ? 'text-primary-600 bg-primary-50'
-                        : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50'
-                    }`}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-                
-                {currentUser ? (
-                  <div className="pt-4 border-t border-gray-200">
-                    <div className="px-3 py-2 text-sm text-gray-500">
-                      {currentUser.displayName || userProfile?.display_name || currentUser.email}
-                      <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-1 rounded">
-                        {userProfile?.role || 'sin rol'}
-                      </span>
+              {isMenuOpen ? (
+                <X className="w-6 h-6 text-gray-700" />
+              ) : (
+                <Menu className="w-6 h-6 text-gray-700" />
+              )}
+            </button>
+          </div>
+
+          {/* Menú móvil */}
+          <AnimatePresence>
+            {isMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-lg"
+              >
+                <div className="px-2 pt-2 pb-3 space-y-1">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`block px-3 py-2 rounded-lg text-base font-medium transition-colors duration-200 ${
+                        isActivePath(link.path)
+                          ? 'bg-gradient-to-r from-primary-50 to-secondary-50 text-primary-600 border-l-4 border-primary-500'
+                          : 'text-gray-700 hover:bg-gray-100 hover:text-primary-600'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+
+                  {/* Información de contacto móvil - Solo teléfono principal */}
+                  <div className="px-3 py-4 border-t border-gray-200 mt-4">
+                    <div className="flex items-center justify-center space-x-4">
+                      <a 
+                        href="https://wa.me/5492914683337" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                      >
+                        <Phone className="w-4 h-4" />
+                        <span>Contactar</span>
+                      </a>
                     </div>
-                    
-                    <Link
-                      to="/perfil"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200"
-                    >
-                      <User className="w-4 h-4 mr-2" />
-                      Mi Perfil
-                    </Link>
-                    
-                    <Link
-                      to="/favoritos"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200"
-                    >
-                      <span className="w-4 h-4 mr-2">❤️</span>
-                      Favoritos
-                    </Link>
-                    
-                    {userRoles.isOwner && (
-                      <Link
-                        to="/users"
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200"
-                      >
-                        <Crown className="w-4 h-4 mr-2 text-yellow-500" />
-                        Gestión de Usuarios
-                      </Link>
-                    )}
-                    
-                    {userRoles.isAdmin && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200"
-                      >
-                        <Settings className="w-4 h-4 mr-2 text-blue-500" />
-                        Panel Admin
-                      </Link>
-                    )}
-                    
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Cerrar Sesión
-                    </button>
                   </div>
-                ) : (
-                  <div className="pt-4 border-t border-gray-200 space-y-2">
-                    <Link
-                      to="/login"
-                      onClick={() => setIsOpen(false)}
-                      className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200"
-                    >
-                      Iniciar Sesión
-                    </Link>
-                    <Link
-                      to="/registro"
-                      onClick={() => setIsOpen(false)}
-                      className="block px-3 py-2 text-base font-medium text-primary-600 hover:bg-primary-50 transition-colors duration-200"
-                    >
-                      Registrarse
-                    </Link>
+
+                  {/* Acciones de usuario móvil */}
+                  <div className="px-3 py-4 border-t border-gray-200">
+                    {currentUser ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg">
+                          <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {userProfile?.name || 'Usuario'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {currentUser.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Link
+                          to="/perfil"
+                          className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <User className="w-4 h-4" />
+                          <span>Mi Perfil</span>
+                        </Link>
+                        
+                        <Link
+                          to="/favoritos"
+                          className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <Heart className="w-4 h-4" />
+                          <span>Favoritos</span>
+                        </Link>
+
+                        {(isAdmin() || isOwner()) && (
+                          <Link
+                            to="/admin"
+                            className="flex items-center space-x-2 px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <Settings className="w-4 h-4" />
+                            <span>Panel Admin</span>
+                          </Link>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            setIsMenuOpen(false);
+                          }}
+                          className="flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left rounded-lg"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Cerrar Sesión</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Link
+                          to="/login"
+                          className="block w-full text-center px-4 py-2 text-gray-700 hover:text-primary-600 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Iniciar Sesión
+                        </Link>
+                        <Link
+                          to="/registro"
+                          className="block w-full text-center btn-primary"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Registrarse
+                        </Link>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </nav>
     </>
   );

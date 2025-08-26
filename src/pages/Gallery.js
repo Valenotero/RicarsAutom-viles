@@ -33,22 +33,65 @@ const Gallery = () => {
 
   useEffect(() => {
     fetchMedia();
+    
+    // 🔧 TIMEOUT DE SEGURIDAD: 15 segundos máximo
+    const timeout = setTimeout(() => {
+      console.warn('⏰ Gallery: Timeout alcanzado, forzando fin de loading');
+      setLoading(false);
+    }, 15000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   const fetchMedia = async () => {
     try {
+      console.log('🔄 [Gallery] Iniciando carga de galería...');
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // 🔧 AGREGAR TIMEOUT A LA CONSULTA
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: Consulta tardó más de 10 segundos')), 10000);
+      });
+      
+      const queryPromise = supabase
         .from('gallery')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      // Usar Promise.race para timeout
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [Gallery] Error en consulta:', error);
+        throw error;
+      }
+      
+      console.log('✅ [Gallery] Datos obtenidos:', {
+        cantidad: data?.length || 0,
+        datos: data
+      });
+      
       setMedia(data || []);
+      
+      // Mostrar toast si no hay datos
+      if (!data || data.length === 0) {
+        toast.info('La galería está vacía');
+      }
+      
     } catch (error) {
-      console.error('Error fetching media:', error);
-      toast.error('Error al cargar la galería');
+      console.error('❌ [Gallery] Error fetching media:', error);
+      
+      // Mostrar error específico al usuario
+      if (error.message?.includes('Timeout')) {
+        toast.error('La galería está tardando mucho en cargar. Intenta refrescar la página.');
+      } else {
+        toast.error('Error al cargar la galería: ' + error.message);
+      }
+      
+      // En caso de error, establecer array vacío para que la UI funcione
+      setMedia([]);
     } finally {
+      console.log('🏁 [Gallery] Finalizando carga, setting loading = false');
       setLoading(false);
     }
   };
@@ -61,7 +104,7 @@ const Gallery = () => {
     setSelectedMedia(item);
     setShowModal(true);
     
-    // Incrementar contador de vistas
+    // Incrementar contador de vistas (con manejo de errores mejorado)
     try {
       const wasIncremented = await incrementGalleryView(item.id);
       if (wasIncremented) {
@@ -75,7 +118,8 @@ const Gallery = () => {
         );
       }
     } catch (error) {
-      console.error('Error incrementando vista:', error);
+      console.error('❌ [Gallery] Error incrementando vista:', error);
+      // No mostrar toast aquí para no molestar al usuario
     }
   };
 
@@ -97,6 +141,7 @@ const Gallery = () => {
       document.body.removeChild(link);
       toast.success('Descarga iniciada');
     } catch (error) {
+      console.error('❌ [Gallery] Error en descarga:', error);
       toast.error('Error al descargar');
     }
   };
@@ -110,7 +155,7 @@ const Gallery = () => {
           url: window.location.href
         });
       } catch (error) {
-        console.log('Error sharing:', error);
+        console.log('❌ [Gallery] Error sharing:', error);
       }
     } else {
       // Fallback para navegadores que no soportan Web Share API
@@ -119,12 +164,26 @@ const Gallery = () => {
     }
   };
 
+  // 🔧 AGREGAR LOADING CON INFORMACIÓN DE DEBUG
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Cargando galería...</p>
+          <p className="mt-2 text-sm text-gray-400">
+            Si esto tarda mucho, intenta refrescar la página
+          </p>
+          {/* 🔧 BOTÓN DE EMERGENCIA */}
+          <button
+            onClick={() => {
+              console.log('🚨 [Gallery] Botón de emergencia activado');
+              setLoading(false);
+            }}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Continuar sin galería
+          </button>
         </div>
       </div>
     );
@@ -179,12 +238,22 @@ const Gallery = () => {
             <h3 className="text-xl font-semibold text-gray-600 mb-2">
               No hay contenido disponible
             </h3>
-            <p className="text-gray-500">
+            <p className="text-gray-500 mb-4">
               {selectedCategory === 'todos' 
-                ? 'La galería está vacía' 
+                ? 'La galería está vacía. Los administradores pueden agregar contenido.' 
                 : `No hay contenido en la categoría "${categories.find(c => c.id === selectedCategory)?.name}"`
               }
             </p>
+            {/* 🔧 BOTÓN PARA RECARGAR */}
+            <button
+              onClick={() => {
+                console.log('🔄 [Gallery] Recargando galería manualmente');
+                fetchMedia();
+              }}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Recargar Galería
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -211,6 +280,10 @@ const Gallery = () => {
                       src={item.url}
                       alt={item.title}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.warn('❌ [Gallery] Error cargando imagen:', item.url);
+                        e.target.src = '/placeholder-image.jpg'; // Imagen de placeholder
+                      }}
                     />
                   )}
                   
@@ -228,7 +301,7 @@ const Gallery = () => {
                   {/* Category Badge */}
                   <div className="absolute top-2 left-2">
                     <span className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      {categories.find(c => c.id === item.category)?.name}
+                      {categories.find(c => c.id === item.category)?.name || item.category}
                     </span>
                   </div>
                 </div>
@@ -266,7 +339,7 @@ const Gallery = () => {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modal - Sin cambios */}
       {showModal && selectedMedia && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
           <motion.div
@@ -321,7 +394,7 @@ const Gallery = () => {
             <div className="p-6">
               <div className="flex items-center gap-2 mb-2">
                 <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  {categories.find(c => c.id === selectedMedia.category)?.name}
+                  {categories.find(c => c.id === selectedMedia.category)?.name || selectedMedia.category}
                 </span>
                 <span className="text-gray-500 text-sm">
                   {new Date(selectedMedia.created_at).toLocaleDateString('es-ES')}

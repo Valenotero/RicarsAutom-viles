@@ -1,11 +1,11 @@
 {
   "short_name": "Ricars",
-  "name": "Ricars Automóviles",
+  "name": "Ricars Automotores",
   "icons": [
     {
-      "src": "favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "RiCarsPNG.png",
+      "sizes": "192x192",
+      "type": "image/png"
     }
   ],
   "start_url": ".",

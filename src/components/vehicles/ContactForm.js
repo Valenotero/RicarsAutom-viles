@@ -44,12 +44,6 @@ const ContactForm = ({ vehicle, onClose, isOpen }) => {
         message: ''
       });
 
-      // Cerrar formulario después de 2 segundos
-      setTimeout(() => {
-        onClose();
-        setSubmitStatus(null);
-      }, 2000);
-
     } catch (error) {
       console.error('Error enviando mensaje:', error);
       setSubmitStatus('error');

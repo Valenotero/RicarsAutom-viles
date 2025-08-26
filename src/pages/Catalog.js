@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import VehicleCard from '../components/vehicles/VehicleCard';
 import CatalogFilters from '../components/catalog/CatalogFilters';
 import { getVehicles } from '../services/vehicleService';
-import { testConnection } from '../supabase/config';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -31,73 +30,204 @@ const Catalog = () => {
     return filters;
   };
 
-  // Aplicar filtros y ordenamiento
+  // Función mejorada para parsear rangos de precios
+  const parsePriceRange = (priceRangeString) => {
+    if (!priceRangeString) return { min: null, max: null };
+    
+    // Manejar diferentes formatos de precio
+    // Formato: "5000-10000" o "priceRange: 5000-10000" o "Hasta $5,000 USD"
+    let cleanString = priceRangeString.toString();
+    
+    // Remover texto descriptivo
+    cleanString = cleanString
+      .replace(/priceRange:\s*/i, '')
+      .replace(/Hasta \$/, '0-')
+      .replace(/\$|,|USD/g, '')
+      .replace(/Más de /, '')
+      .replace(/\s+/g, '');
+    
+    // Si contiene un guión, es un rango
+    if (cleanString.includes('-')) {
+      const [min, max] = cleanString.split('-').map(val => {
+        const num = parseInt(val);
+        return isNaN(num) ? null : num;
+      });
+      return { min, max };
+    }
+    
+    // Si es un solo número, tratarlo como precio mínimo
+    const singlePrice = parseInt(cleanString);
+    if (!isNaN(singlePrice)) {
+      return { min: singlePrice, max: null };
+    }
+    
+    return { min: null, max: null };
+  };
+
+  // Aplicar filtros y ordenamiento corregido
   const applyFiltersAndSort = (vehicles, filters, sortBy) => {
     const list = Array.isArray(vehicles) ? vehicles : [];
     let filtered = [...list];
 
-    // Aplicar filtros
+    console.log('🔍 Aplicando filtros:', filters);
+    console.log('📊 Vehículos iniciales:', filtered.length);
+
+    // Aplicar filtros básicos
     if (filters.brand) {
       filtered = filtered.filter(v => 
-        v.brand.toLowerCase().includes(filters.brand.toLowerCase())
+        v.brand?.toLowerCase().includes(filters.brand.toLowerCase())
       );
+      console.log(`📋 Después de filtro marca (${filters.brand}):`, filtered.length);
     }
+    
     if (filters.model) {
       filtered = filtered.filter(v => 
-        v.model.toLowerCase().includes(filters.model.toLowerCase())
+        v.model?.toLowerCase().includes(filters.model.toLowerCase())
       );
+      console.log(`🚗 Después de filtro modelo (${filters.model}):`, filtered.length);
     }
+    
     if (filters.type) {
       filtered = filtered.filter(v => v.type === filters.type);
+      console.log(`🏷️ Después de filtro tipo (${filters.type}):`, filtered.length);
     }
+    
     if (filters.condition) {
       filtered = filtered.filter(v => v.condition === filters.condition);
+      console.log(`⚙️ Después de filtro condición (${filters.condition}):`, filtered.length);
     }
+    
     if (filters.transmission) {
       filtered = filtered.filter(v => v.transmission === filters.transmission);
+      console.log(`🔧 Después de filtro transmisión (${filters.transmission}):`, filtered.length);
     }
+    
     if (filters.fuelType) {
       filtered = filtered.filter(v => v.fuel_type === filters.fuelType);
+      console.log(`⛽ Después de filtro combustible (${filters.fuelType}):`, filtered.length);
     }
+
+    // Filtro de precios corregido
+    if (filters.priceRange) {
+      const { min, max } = parsePriceRange(filters.priceRange);
+      console.log(`💰 Rango de precios parseado:`, { min, max, original: filters.priceRange });
+      
+      if (min !== null) {
+        filtered = filtered.filter(v => {
+          const vehiclePrice = v.promotion_price || v.price || 0;
+          const isInRange = vehiclePrice >= min;
+          console.log(`💲 Vehículo ${v.brand} ${v.model} - Precio: $${vehiclePrice}, Min: $${min}, Incluido: ${isInRange}`);
+          return isInRange;
+        });
+      }
+      
+      if (max !== null) {
+        filtered = filtered.filter(v => {
+          const vehiclePrice = v.promotion_price || v.price || 0;
+          const isInRange = vehiclePrice <= max;
+          console.log(`💲 Vehículo ${v.brand} ${v.model} - Precio: $${vehiclePrice}, Max: $${max}, Incluido: ${isInRange}`);
+          return isInRange;
+        });
+      }
+      
+      console.log(`💰 Después de filtro precios (${min}-${max}):`, filtered.length);
+    }
+
+    // Filtros de precio individuales (por compatibilidad)
     if (filters.minPrice) {
-      filtered = filtered.filter(v => v.price >= parseInt(filters.minPrice));
+      const minPrice = parseInt(filters.minPrice);
+      if (!isNaN(minPrice)) {
+        filtered = filtered.filter(v => {
+          const vehiclePrice = v.promotion_price || v.price || 0;
+          return vehiclePrice >= minPrice;
+        });
+        console.log(`💰 Después de precio mínimo ($${minPrice}):`, filtered.length);
+      }
     }
+    
     if (filters.maxPrice) {
-      filtered = filtered.filter(v => v.price <= parseInt(filters.maxPrice));
+      const maxPrice = parseInt(filters.maxPrice);
+      if (!isNaN(maxPrice)) {
+        filtered = filtered.filter(v => {
+          const vehiclePrice = v.promotion_price || v.price || 0;
+          return vehiclePrice <= maxPrice;
+        });
+        console.log(`💰 Después de precio máximo ($${maxPrice}):`, filtered.length);
+      }
     }
+
+    // Filtros de año
     if (filters.minYear) {
       filtered = filtered.filter(v => v.year >= parseInt(filters.minYear));
+      console.log(`📅 Después de año mínimo (${filters.minYear}):`, filtered.length);
     }
+    
     if (filters.maxYear) {
       filtered = filtered.filter(v => v.year <= parseInt(filters.maxYear));
+      console.log(`📅 Después de año máximo (${filters.maxYear}):`, filtered.length);
     }
 
     // Aplicar ordenamiento
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => {
+          const priceA = a.promotion_price || a.price || 0;
+          const priceB = b.promotion_price || b.price || 0;
+          return priceA - priceB;
+        });
         break;
       case 'price-high':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => {
+          const priceA = a.promotion_price || a.price || 0;
+          const priceB = b.promotion_price || b.price || 0;
+          return priceB - priceA;
+        });
         break;
       case 'year-new':
-        filtered.sort((a, b) => b.year - a.year);
+        filtered.sort((a, b) => (b.year || 0) - (a.year || 0));
         break;
       case 'year-old':
-        filtered.sort((a, b) => a.year - b.year);
+        filtered.sort((a, b) => (a.year || 0) - (b.year || 0));
         break;
       case 'km-low':
-        filtered.sort((a, b) => a.kilometers - b.kilometers);
+        filtered.sort((a, b) => (a.kilometers || a.mileage || 0) - (b.kilometers || b.mileage || 0));
         break;
       case 'km-high':
-        filtered.sort((a, b) => b.kilometers - a.kilometers);
+        filtered.sort((a, b) => (b.kilometers || b.mileage || 0) - (a.kilometers || a.mileage || 0));
         break;
       default:
         // newest (por defecto)
-        filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     }
 
+    console.log('✅ Vehículos finales después de filtros y ordenamiento:', filtered.length);
     return filtered;
+  };
+
+  // Función para formatear el display de filtros activos
+  const formatFilterDisplay = (key, value) => {
+    switch (key) {
+      case 'priceRange':
+        const { min, max } = parsePriceRange(value);
+        if (min && max) {
+          return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+        } else if (min) {
+          return `Desde $${min.toLocaleString()}`;
+        } else if (max) {
+          return `Hasta $${max.toLocaleString()}`;
+        }
+        return value;
+      case 'minPrice':
+        return `Desde $${parseInt(value).toLocaleString()}`;
+      case 'maxPrice':
+        return `Hasta $${parseInt(value).toLocaleString()}`;
+      case 'minYear':
+        return `Desde ${value}`;
+      case 'maxYear':
+        return `Hasta ${value}`;
+      default:
+        return value;
+    }
   };
 
   useEffect(() => {
@@ -106,9 +236,16 @@ const Catalog = () => {
         console.log('📋 Iniciando carga de vehículos...');
         setLoading(true);
         
-        // Cargar vehículos directamente (sin test previo)
         const allVehicles = await getVehicles();
         console.log('📊 Total vehículos obtenidos:', allVehicles?.length || 0);
+        
+        // Log de algunos precios para debug
+        if (allVehicles && allVehicles.length > 0) {
+          console.log('💰 Muestra de precios de vehículos:');
+          allVehicles.slice(0, 5).forEach(v => {
+            console.log(`  ${v.brand} ${v.model}: $${v.price} ${v.promotion_price ? `(oferta: $${v.promotion_price})` : ''}`);
+          });
+        }
         
         const filters = getFiltersFromURL();
         console.log('🔍 Filtros URL:', filters);
@@ -120,7 +257,6 @@ const Catalog = () => {
       } catch (error) {
         console.error('❌ Error cargando vehículos:', error);
         toast.error('Hubo un problema al cargar los vehículos');
-        // No mostrar datos mock - la base debe estar vacía hasta que el admin agregue vehículos
         setVehicles([]);
       } finally {
         setLoading(false);
@@ -131,6 +267,7 @@ const Catalog = () => {
   }, [searchParams, sortBy]);
 
   const handleFilterChange = (newFilters) => {
+    console.log('🔄 Nuevos filtros recibidos:', newFilters);
     const params = new URLSearchParams();
     
     Object.entries(newFilters).forEach(([key, value]) => {
@@ -228,7 +365,7 @@ const Catalog = () => {
                   key={key}
                   className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
                 >
-                  {key}: {value}
+                  {key}: {formatFilterDisplay(key, value)}
                   <button
                     onClick={() => {
                       const newFilters = getFiltersFromURL();
